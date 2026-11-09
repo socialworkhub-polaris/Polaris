@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as protomapsL from 'protomaps-leaflet';
+import { LIGHT } from '@protomaps/basemaps';
 import { Facility } from '@/types/facility';
 import { Building2, HeartHandshake, MapPin, Printer, ChevronRight, Train } from 'lucide-react';
 
@@ -16,6 +17,63 @@ interface LeafletMapProps {
   onOpenPrint: (facility: Facility) => void;
 }
 
+// Google Maps-inspired warm & vibrant cartography styling
+const GOOGLE_MAPS_THEME = {
+  ...LIGHT,
+  background: '#f4f3f0',
+  earth: '#f4f3f0',
+  water: '#a5d7f8',
+  park_a: '#cbe6c4',
+  park_b: '#b7e2af',
+  wood_a: '#cbe6c4',
+  wood_b: '#b7e2af',
+  scrub_a: '#d2ebcc',
+  scrub_b: '#b7e2af',
+  glacier: '#ffffff',
+  sand: '#f5ecd7',
+  beach: '#faebd7',
+  aerodrome: '#e8eaed',
+  runway: '#ffffff',
+  pedestrian: '#e8eaed',
+  buildings: '#e3e4e6',
+  hospital: '#fce8e6',
+  industrial: '#eceff1',
+  school: '#fef7e0',
+  highway: '#ffd15c',
+  highway_casing_early: '#f9a825',
+  highway_casing_late: '#e6a830',
+  major: '#ffffff',
+  major_casing_early: '#dadce0',
+  major_casing_late: '#cfd2d7',
+  minor_a: '#ffffff',
+  minor_b: '#ffffff',
+  minor_casing: '#e8eaed',
+  minor_service: '#ffffff',
+  minor_service_casing: '#f1f3f4',
+  railway: '#9aa0a6',
+  boundaries: '#9aa0a6',
+  city_label: '#202124',
+  city_label_halo: '#ffffff',
+  subplace_label: '#3c4043',
+  subplace_label_halo: '#ffffff',
+  roads_label_major: '#3c4043',
+  roads_label_major_halo: '#ffffff',
+  roads_label_minor: '#5f6368',
+  roads_label_minor_halo: '#ffffff',
+  ocean_label: '#1a73e8',
+  address_label: '#5f6368',
+  address_label_halo: '#ffffff',
+  landcover: {
+    grassland: '#cbe6c4',
+    barren: '#f5ecd7',
+    urban_area: '#f4f3f0',
+    farmland: '#e2f0d9',
+    glacier: '#ffffff',
+    scrub: '#d2ebcc',
+    forest: '#b7e2af',
+  },
+};
+
 // Protomaps Vector Layer Component
 const ProtomapsLayer: React.FC<{ apiKey: string }> = ({ apiKey }) => {
   const map = useMap();
@@ -26,8 +84,10 @@ const ProtomapsLayer: React.FC<{ apiKey: string }> = ({ apiKey }) => {
     try {
       const layer = protomapsL.leafletLayer({
         url: `https://api.protomaps.com/tiles/v3/{z}/{x}/{y}.mvt?key=${apiKey}`,
-        flavor: 'light',
+        paintRules: protomapsL.paintRules(GOOGLE_MAPS_THEME),
+        labelRules: protomapsL.labelRules(GOOGLE_MAPS_THEME),
         lang: 'de',
+        backgroundColor: '#a5d7f8',
       });
 
       layer.addTo(map);
