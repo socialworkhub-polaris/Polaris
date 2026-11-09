@@ -184,13 +184,16 @@ export default function UserMenu() {
     );
   }
 
+  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+  const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email;
+
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-200">
-        {user.photoURL ? (
+        {avatarUrl ? (
           <img
-            src={user.photoURL}
-            alt={user.displayName || 'Profil'}
+            src={avatarUrl}
+            alt={displayName || 'Profil'}
             className="h-6 w-6 rounded-full object-cover border border-slate-200"
           />
         ) : (
@@ -199,7 +202,7 @@ export default function UserMenu() {
           </div>
         )}
         <span className="text-xs text-slate-700 font-medium max-w-[120px] truncate">
-          {user.displayName || user.email}
+          {displayName}
         </span>
       </div>
 

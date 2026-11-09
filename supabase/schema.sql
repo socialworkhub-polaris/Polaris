@@ -88,3 +88,23 @@ CREATE POLICY "Allow service role all on facility_edits"
     TO service_role
     USING (true)
     WITH CHECK (true);
+
+-- =====================================================================
+-- Table: public.user_bookmarks (Caseworker saved facilities)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS public.user_bookmarks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    facility_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, facility_id)
+);
+
+ALTER TABLE public.user_bookmarks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage own bookmarks" ON public.user_bookmarks;
+CREATE POLICY "Users can manage own bookmarks"
+    ON public.user_bookmarks
+    FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
