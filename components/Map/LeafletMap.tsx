@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import * as protomapsL from 'protomaps-leaflet';
 import { Facility } from '@/types/facility';
 import { Building2, HeartHandshake, MapPin, Printer, ChevronRight, Train } from 'lucide-react';
 
@@ -14,6 +15,33 @@ interface LeafletMapProps {
   onOpenDetails: (facility: Facility) => void;
   onOpenPrint: (facility: Facility) => void;
 }
+
+// Protomaps Vector Layer Component
+const ProtomapsLayer: React.FC<{ apiKey: string }> = ({ apiKey }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !apiKey) return;
+
+    try {
+      const layer = protomapsL.leafletLayer({
+        url: `https://api.protomaps.com/tiles/v3/{z}/{x}/{y}.mvt?key=${apiKey}`,
+        flavor: 'light',
+        lang: 'de',
+      });
+
+      layer.addTo(map);
+
+      return () => {
+        map.removeLayer(layer);
+      };
+    } catch (err) {
+      console.warn('Protomaps layer initialization error:', err);
+    }
+  }, [map, apiKey]);
+
+  return null;
+};
 
 // Controller component to smoothly fly map to selected facility
 const MapController: React.FC<{ selectedFacility: Facility | null }> = ({ selectedFacility }) => {
@@ -66,6 +94,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   onOpenPrint,
 }) => {
   const berlinCenter: [number, number] = [52.518, 13.405];
+  const protomapsKey = process.env.NEXT_PUBLIC_PROTOMAPS_API_KEY || '411822e93f07bac5';
 
   return (
     <div className="relative w-full h-full">
@@ -76,11 +105,15 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         className="w-full h-full z-10"
         style={{ minHeight: '100%', background: '#e2e8f0' }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> Mitwirkende'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
-        />
+        {protomapsKey ? (
+          <ProtomapsLayer apiKey={protomapsKey} />
+        ) : (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> Mitwirkende'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+        )}
 
         <MapController selectedFacility={selectedFacility} />
 
