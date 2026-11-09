@@ -12,6 +12,7 @@ import { Facility, FilterState } from '@/types/facility';
 import { List, Map as MapIcon } from 'lucide-react';
 import { useBookmarks } from '@/lib/useBookmarks';
 import TriageModal from '@/components/TriageModal';
+import EmergencyBar from '@/components/EmergencyBar';
 
 const INITIAL_FILTERS: FilterState = {
   searchQuery: '',
@@ -22,6 +23,7 @@ const INITIAL_FILTERS: FilterState = {
   district: 'all',
   wheelchairOnly: false,
   language: 'all',
+  kaeltehilfeOnly: false,
 };
 
 export default function Home() {
@@ -132,6 +134,19 @@ export default function Home() {
         return false;
       }
 
+      // 9. Kältehilfe & Notübernachtung (Seasonal)
+      if (filterState.kaeltehilfeOnly) {
+        const textToSearch = `${facility.name} ${facility.subTitle} ${facility.internalWorkerNotes || ''} ${(facility.targetGroups || []).join(' ')}`.toLowerCase();
+        const matchesEmergency =
+          textToSearch.includes('kälte') ||
+          textToSearch.includes('notübernachtung') ||
+          textToSearch.includes('wärmestube') ||
+          textToSearch.includes('nachtcafé') ||
+          textToSearch.includes('obdachlos') ||
+          textToSearch.includes('wohnungslos');
+        if (!matchesEmergency) return false;
+      }
+
       return true;
     });
   }, [facilities, filterState, showOnlyBookmarks, isBookmarked]);
@@ -157,7 +172,8 @@ export default function Home() {
       filterState.ageGroups.length > 0 ||
       filterState.district !== 'all' ||
       filterState.wheelchairOnly !== false ||
-      filterState.language !== 'all'
+      filterState.language !== 'all' ||
+      !!filterState.kaeltehilfeOnly
     );
   }, [filterState]);
 
@@ -241,7 +257,7 @@ export default function Home() {
         </div>
 
         {/* Mobile View Switcher */}
-        <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur-md p-1 rounded-full shadow-2xl border border-slate-700 flex items-center gap-1">
+        <div className="lg:hidden fixed bottom-12 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur-md p-1 rounded-full shadow-2xl border border-slate-700 flex items-center gap-1">
           <button
             onClick={() => setMobileTab('list')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${
@@ -266,6 +282,9 @@ export default function Home() {
           </button>
         </div>
       </main>
+
+      {/* Streetwork Emergency Hotlines Bar */}
+      <EmergencyBar />
 
       {/* Detail Slide-Over Drawer */}
       <DetailDrawer

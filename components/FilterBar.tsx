@@ -14,6 +14,7 @@ import {
   Languages,
   Users,
   Calendar,
+  Snowflake,
 } from 'lucide-react';
 import { FilterState, InstitutionType, AccessType, PrimaryFocus, BerlinDistrict, AgeGroup } from '@/types/facility';
 import { BERLIN_DISTRICTS, PRIMARY_FOCUS_OPTIONS, AGE_GROUP_OPTIONS, COMMON_LANGUAGES } from '@/data/districts';
@@ -119,6 +120,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           >
             <Bookmark className={`w-3.5 h-3.5 ${showOnlyBookmarks ? 'fill-amber-500 text-amber-500' : 'text-slate-400'}`} />
             <span className="hidden sm:inline">Favoriten</span>
+          </button>
+
+          {/* Kältehilfe Schnell-Filter (Saisonal) */}
+          <button
+            type="button"
+            onClick={() => onChange({ ...filterState, kaeltehilfeOnly: !filterState.kaeltehilfeOnly })}
+            className={`inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg border transition-all shrink-0 cursor-pointer ${
+              filterState.kaeltehilfeOnly
+                ? 'bg-cyan-600 text-white border-cyan-700 shadow-sm ring-2 ring-cyan-400/30'
+                : 'bg-cyan-50/80 text-cyan-800 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-900'
+            }`}
+            title="Nur Notübernachtungen, Wärmestuben und Kältehilfe-Angebote anzeigen"
+          >
+            <Snowflake className={`w-3.5 h-3.5 ${filterState.kaeltehilfeOnly ? 'animate-pulse text-white' : 'text-cyan-600'}`} />
+            <span>Kältehilfe</span>
           </button>
         </div>
 

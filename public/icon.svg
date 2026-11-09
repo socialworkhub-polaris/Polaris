@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0f172a" />
+  <circle cx="256" cy="256" r="180" stroke="#334155" stroke-width="6" fill="none" stroke-dasharray="8 8" />
+  <circle cx="256" cy="256" r="130" stroke="#1e293b" stroke-width="12" fill="#0f172a" />
+  <!-- Compass Star (Polaris) -->
+  <path d="M256 70 L286 226 L442 256 L286 286 L256 442 L226 286 L70 256 L226 226 Z" fill="#3b82f6" />
+  <path d="M256 70 L286 226 L256 256 Z" fill="#60a5fa" />
+  <path d="M442 256 L286 286 L256 256 Z" fill="#2563eb" />
+  <path d="M256 442 L226 286 L256 256 Z" fill="#1d4ed8" />
+  <path d="M70 256 L226 226 L256 256 Z" fill="#93c5fd" />
+  <!-- Center Accent / North pointer in warm orange/amber -->
+  <polygon points="256,120 274,256 256,242" fill="#f97316" />
+  <polygon points="256,120 238,256 256,242" fill="#ea580c" />
+  <circle cx="256" cy="256" r="14" fill="#ffffff" />
+  <circle cx="256" cy="256" r="6" fill="#0f172a" />
+</svg>

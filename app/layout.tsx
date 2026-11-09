@@ -1,11 +1,25 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/AuthContext';
+import PWARegister from '@/components/PWARegister';
 
 export const metadata: Metadata = {
   title: 'Polaris | Triage & Trägerportal für Berliner Sozialarbeit',
   description:
-    'Spezialisierte Triage- und Kooperationsplattform für Berliner Sozialarbeiter*innen',
+    'Spezialisierte Triage- und Kooperationsplattform für Berliner Sozialarbeiter*innen (Offline-fähig für Streetwork)',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Polaris',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -17,6 +31,7 @@ export default function RootLayout({
     <html lang="de">
       <body>
         <AuthProvider>
+          <PWARegister />
           {children}
         </AuthProvider>
       </body>

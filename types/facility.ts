@@ -90,4 +90,5 @@ export interface FilterState {
   district: 'all' | BerlinDistrict;
   wheelchairOnly: boolean;
   language: 'all' | string;
+  kaeltehilfeOnly?: boolean;
 }
