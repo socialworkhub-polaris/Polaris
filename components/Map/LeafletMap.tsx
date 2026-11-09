@@ -247,7 +247,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       </MapContainer>
 
       {/* Map Legend Overlay */}
-      <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-sm p-2.5 rounded-lg shadow-lg border border-slate-200 text-xs space-y-1.5">
+      <div className="absolute bottom-5 left-4 z-20 bg-white/95 backdrop-blur-sm p-2.5 rounded-lg shadow-lg border border-slate-200 text-xs space-y-1.5 max-w-[calc(100vw-32px)] sm:max-w-xs pointer-events-auto">
         <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">Kartenlegende</div>
         <div className="flex items-center gap-2">
           <span className="w-3.5 h-3.5 rounded-full bg-blue-600 border border-white shadow-sm inline-block shrink-0"></span>

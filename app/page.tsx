@@ -228,7 +228,7 @@ export default function Home() {
           />
 
           {/* Card Stream */}
-          <div className="w-full flex-1">
+          <div className="w-full flex-1 pb-16 lg:pb-14">
             <FacilityList
               facilities={filteredFacilities}
               selectedFacility={selectedFacility}
@@ -243,8 +243,8 @@ export default function Home() {
 
         {/* Right Column: Interactive Berlin Leaflet Map (Felsenfest fixiert) */}
         <div
-          className={`w-full lg:fixed lg:right-0 lg:bottom-0 lg:w-[50%] xl:w-[52%] lg:top-[57px] bg-slate-200 z-10 ${
-            mobileTab === 'list' ? 'hidden lg:block' : 'block h-[calc(100vh-120px)]'
+          className={`w-full lg:w-[50%] xl:w-[52%] bg-slate-200 z-10 polaris-fixed-map ${
+            mobileTab === 'list' ? 'hidden lg:block' : 'block polaris-mobile-map'
           }`}
         >
           <MapWrapper
@@ -257,7 +257,7 @@ export default function Home() {
         </div>
 
         {/* Mobile View Switcher */}
-        <div className="lg:hidden fixed bottom-12 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur-md p-1 rounded-full shadow-2xl border border-slate-700 flex items-center gap-1">
+        <div className="lg:hidden fixed bottom-14 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur-md p-1 rounded-full shadow-2xl border border-slate-700 flex items-center gap-1">
           <button
             onClick={() => setMobileTab('list')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all ${

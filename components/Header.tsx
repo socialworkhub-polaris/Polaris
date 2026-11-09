@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Star, Building2, HeartHandshake, RefreshCw, Sparkles, FilterX, ShieldCheck, CreditCard, Globe, MessageSquare } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
 import { LegalModal } from '@/components/LegalModal';
@@ -40,8 +40,30 @@ export const Header: React.FC<HeaderProps> = ({
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const updateHeight = () => {
+      if (headerRef.current) {
+        document.documentElement.style.setProperty(
+          '--header-height',
+          `${headerRef.current.offsetHeight}px`
+        );
+      }
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRef.current);
+    window.addEventListener('resize', updateHeight);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, []);
+
   return (
-    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-sm">
+    <header ref={headerRef} className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           

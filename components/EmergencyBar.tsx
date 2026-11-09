@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Phone, ChevronDown, ChevronUp, ShieldAlert, HeartHandshake, Snowflake } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -55,9 +55,30 @@ const HOTLINES: Hotline[] = [
 export default function EmergencyBar() {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useLanguage();
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!barRef.current) return;
+    const updateHeight = () => {
+      if (barRef.current) {
+        document.documentElement.style.setProperty(
+          '--emergency-bar-height',
+          `${barRef.current.offsetHeight}px`
+        );
+      }
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(barRef.current);
+    window.addEventListener('resize', updateHeight);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, [isOpen]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-700 shadow-2xl transition-all">
+    <div ref={barRef} className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-700 shadow-2xl transition-all">
       {/* Drawer Toggle Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
