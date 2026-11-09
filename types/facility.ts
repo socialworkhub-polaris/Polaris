@@ -70,6 +70,15 @@ export interface Facility {
     elevator: boolean;
   };
   internalWorkerNotes: string; // Practical tips for caseworkers (e.g. "Dienstags immer hoher Andrang vor 08:00 Uhr, Notfall-Clearing über Zimmer 104.")
+  targetGroups?: string[];
+  features?: {
+    wheelchairAccessible?: boolean;
+    languages?: string[];
+    freeOfCharge?: boolean;
+    anonymous?: boolean;
+    dogsAllowed?: boolean;
+    queerFriendly?: boolean;
+  };
 }
 
 export interface FilterState {

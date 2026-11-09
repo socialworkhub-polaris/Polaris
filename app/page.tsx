@@ -28,7 +28,7 @@ export default function Home() {
   const { isBookmarked } = useBookmarks();
   const [showOnlyBookmarks, setShowOnlyBookmarks] = useState(false);
   const [facilities, setFacilities] = useState<Facility[]>(MOCK_FACILITIES);
-  const [dataSource, setDataSource] = useState<'notion' | 'mock'>('mock');
+  const [dataSource, setDataSource] = useState<'supabase' | 'notion' | 'mock'>('mock');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 

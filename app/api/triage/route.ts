@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import { TriageInput, TriageResponse, TriageStep } from '@/types/triage';
 import { Facility } from '@/types/facility';
 import { MOCK_FACILITIES } from '@/data/facilities';
+import { fetchFacilitiesFromSupabase } from '@/lib/supabase';
+import { checkRateLimit } from '@/lib/rateLimit';
 
-// Hilfsfunktion: Prüft, ob zwei Bezirksangaben übereinstimmen (auch bei Bindestrich-Bezirken)
+// Helper: Matches district string with borough aliases
 function matchesDistrictOrCitywide(facDistrictRaw: string, targetDistrictRaw: string): boolean {
   if (!targetDistrictRaw) return true;
   const facD = facDistrictRaw.toLowerCase().trim();
@@ -12,14 +14,24 @@ function matchesDistrictOrCitywide(facDistrictRaw: string, targetDistrictRaw: st
   if (!facD || facD.includes('berlinweit') || facD === 'berlin') return true;
   if (facD.includes(targetD) || targetD.includes(facD)) return true;
 
-  // Splitte bei Bindestrichen & Leerzeichen (z. B. "Friedrichshain-Kreuzberg" -> ["friedrichshain", "kreuzberg"])
   const targetParts = targetD.split(/[-–/\s]+/).filter((p) => p.length > 3);
   const facParts = facD.split(/[-–/\s]+/).filter((p) => p.length > 3);
 
   return targetParts.some((tp) => facD.includes(tp)) || facParts.some((fp) => targetD.includes(fp));
 }
 
-// 0 Tokens: Deterministischer Vorfilter nach Rechtskreis, Alter & Bezirk
+// Input sanitizer against prompt injection & oversized payloads
+function sanitizeNotes(raw: string | undefined): string {
+  if (!raw) return 'Keine';
+  return raw
+    .replace(/```/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\b(system|assistant|instruction|prompt)\s*:/gi, '')
+    .slice(0, 400)
+    .trim() || 'Keine';
+}
+
+// 0-Tokens Deterministic Pre-Filter
 function prefilterRelevantFacilities(input: TriageInput, allFacilities: Facility[]): Facility[] {
   const targetDistrict = input.district?.trim() || '';
   const isMinor = input.clientAge !== undefined && input.clientAge < 18;
@@ -33,18 +45,18 @@ function prefilterRelevantFacilities(input: TriageInput, allFacilities: Facility
       ? fac.targetGroups.map((g: string) => g.toLowerCase())
       : [];
 
-    // 1. Physische Barrieren (Haustiere & Rollstuhl)
+    // 1. Accessibility & Pet constraints
     if (input.hasPet && fac.features?.dogsAllowed === false) return false;
     if (input.hasMobilityImpairment && fac.features?.wheelchairAccessible === false) return false;
 
-    // 2. Strikte Bezirkszuständigkeit bei Behörden/Ämtern
+    // 2. Strict district jurisdiction for statutory agencies (Ämter)
     if (fac.institutionType === 'amt' && targetDistrict) {
       if (!matchesDistrictOrCitywide(facDistrict, targetDistrict)) {
-        return false; // Amt eines fremden Bezirks sofort ausschließen
+        return false;
       }
     }
 
-    // 3. Altersgrenzen & Rechtskreis (Minderjährige -> SGB VIII)
+    // 3. Child protection & SGB VIII circuit breaker
     if (isMinor) {
       if (
         focus.includes('notuebernachtung') ||
@@ -78,7 +90,7 @@ function prefilterRelevantFacilities(input: TriageInput, allFacilities: Facility
       }
     }
 
-    // 4. Schutzschalter: Sucht & Drogen
+    // 4. Substance & Mental Health filtering
     const isSubstance =
       focus.includes('sucht') ||
       focus.includes('droge') ||
@@ -90,7 +102,7 @@ function prefilterRelevantFacilities(input: TriageInput, allFacilities: Facility
       return false;
     }
 
-    // 5. Gesicherter Wohnraum (Elterlicher Haushalt / Miete)
+    // 5. Stable housing constraint (no homeless shelters if client has tenancy)
     if (isStableHoused) {
       if (
         focus.includes('notuebernachtung') ||
@@ -103,7 +115,7 @@ function prefilterRelevantFacilities(input: TriageInput, allFacilities: Facility
       }
     }
 
-    // 6. Freie Träger Bezirkszuordnung (nur bezirkseigene oder berlinweite Angebote)
+    // 6. District matching for local providers
     if (targetDistrict && facDistrict && !matchesDistrictOrCitywide(facDistrict, targetDistrict)) {
       if (!facDistrict.toLowerCase().includes('berlinweit') && facDistrict.toLowerCase() !== 'berlin') {
         return false;
@@ -113,59 +125,74 @@ function prefilterRelevantFacilities(input: TriageInput, allFacilities: Facility
     return true;
   });
 
-  return filtered.slice(0, 8);
+  return filtered.slice(0, 10);
 }
 
-// Fallback ohne KI (deterministisch und bezirkssicher)
+// Fallback logic when AI is unavailable
 function generateFallback(input: TriageInput, candidates: Facility[]): TriageResponse {
   const isMinor = input.clientAge !== undefined && input.clientAge < 18;
 
   if (isMinor) {
     return {
       summary: `Jugendhilfe-Erstabklärung (SGB VIII) für den Bezirk ${input.district || 'Berlin'}.`,
-      legalContext: ['SGB VIII (Kinder- und Jugendhilfe)', '§ 8a SGB VIII', '§ 28 SGB VIII (Erziehungsberatung)'],
+      legalContext: ['SGB VIII (Kinder- und Jugendhilfe)', '§ 8a SGB VIII (Schutzauftrag)', '§ 28 SGB VIII (Erziehungsberatung)'],
       steps: [
         {
           phase: 'sofort',
-          title: 'Kontaktaufnahme Jugendamt / RSD oder EFB',
-          action: 'Beratungsgespräch beim Regionalen Sozialpädagogischen Dienst (RSD) oder einer Erziehungsberatungsstelle vereinbaren.',
-          requiredDocs: [input.hasIdOrPassport ? 'Schülerausweis / Ausweis' : 'Soweit vorhanden Dokumente mitbringen'],
-          matchedFacilities: candidates.slice(0, 1),
+          title: 'Kontaktaufnahme Jugendamt / Regionaler Sozialpädagogischer Dienst (RSD)',
+          action: 'Persönliche oder telefonische Meldung beim RSD zur Sicherung des Kindeswohls und Klärung der Hilfen zur Erziehung.',
+          requiredDocs: [input.hasIdOrPassport ? 'Schülerausweis / Ausweisdokument' : 'Vorsprache auch ohne Ausweis möglich'],
+          matchedFacilities: candidates.filter(c => c.name.toLowerCase().includes('jugend')).slice(0, 1),
         },
         {
           phase: 'beratung',
-          title: 'Familien- und Erziehungsberatung',
-          action: 'Niedrigschwellige Unterstützung zur Klärung der familiären Situation wahrnehmen.',
+          title: 'Erziehungs- und Familienberatung (EFB)',
+          action: 'Niedrigschwellige Unterstützung zur Klärung der familiären Konfliktlage wahrnehmen.',
           requiredDocs: ['Keine Dokumente zwingend erforderlich'],
-          matchedFacilities: candidates.slice(1, 2),
+          matchedFacilities: candidates.filter(c => !c.name.toLowerCase().includes('jugendamt')).slice(0, 1),
         },
       ],
     };
   }
 
+  const immediateFacilities = candidates.filter(c => 
+    c.accessType === 'niedrigschwellig' || c.primaryFocus === 'betreutes_wohnen'
+  ).slice(0, 1);
+
+  const statutoryFacilities = candidates.filter(c => c.institutionType === 'amt').slice(0, 1);
+
   return {
     summary: `Sozialrechtlicher Stufenplan für den Bezirk ${input.district || 'Berlin'}.`,
-    legalContext: ['SGB II', '§ 36 SGB XII', 'ASOG Berlin'],
+    legalContext: ['SGB II / SGB XII', '§ 36 SGB XII (Unterkunftssicherung)', 'ASOG Berlin (Gefahrenabwehr)'],
     steps: [
       {
         phase: 'sofort',
-        title: 'Erstabklärung & Grundversorgung',
-        action: 'Persönliche Vorsprache zur Klärung der Akutlage.',
+        title: 'Akutversorgung & Notunterbringung',
+        action: 'Klärung der unmittelbaren Existenz- und Übernachtungsmöglichkeit.',
         requiredDocs: [input.hasIdOrPassport ? 'Ausweisdokument' : 'Vorsprache zur Identitätsklärung'],
-        matchedFacilities: candidates.slice(0, 1),
+        matchedFacilities: immediateFacilities,
       },
       {
         phase: 'behoerde',
-        title: 'Leistungs- und Existenzsicherung',
-        action: 'Antragstellung bei der zuständigen Fachstelle (Offene Notfallsprechstunde, Termin empfohlen).',
-        requiredDocs: ['Kontoauszüge der letzten 3 Monate', 'Mietunterlagen'],
-        matchedFacilities: candidates.slice(1, 2),
+        title: 'Leistungs- und Existenzsicherung beim Amt',
+        action: 'Persönliche Vorsprache in der Notfallsprechstunde zur Beantragung von existenzsichernden Leistungen.',
+        requiredDocs: ['Kontoauszüge der letzten 3 Monate', 'Mietunterlagen / Mietvertrag (falls vorhanden)'],
+        matchedFacilities: statutoryFacilities,
       },
     ],
   };
 }
 
 export async function POST(req: Request) {
+  // Rate limit: max 20 triage requests per 10 minutes per IP
+  const rateLimit = checkRateLimit(req, 20, 600000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Zu viele Triage-Anfragen. Bitte in ${rateLimit.resetInSec} Sekunden erneut versuchen.` },
+      { status: 429 }
+    );
+  }
+
   let input: TriageInput;
   try {
     input = await req.json();
@@ -173,12 +200,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Ungültige Anfrage' }, { status: 400 });
   }
 
-  const allFacilities: Facility[] = MOCK_FACILITIES || [];
-  
-  // 1. Lokaler Vorfilter (0 Tokens)
+  // Load facilities: try Supabase first, fallback to MOCK_FACILITIES
+  let allFacilities: Facility[] = MOCK_FACILITIES || [];
+  try {
+    const sb = await fetchFacilitiesFromSupabase();
+    if (sb.facilities && sb.facilities.length > 0) {
+      allFacilities = sb.facilities;
+    }
+  } catch (e) {
+    // silently keep mock data
+  }
+
+  // 1. Deterministic Pre-Filter (0 Tokens)
   const candidateFacilities = prefilterRelevantFacilities(input, allFacilities);
 
-  // Fallback-Pool: Nur berlinweite Träger oder Treffer aus dem Vorfilter (verhindert Mitte-Bias)
   const citywideFallback = allFacilities.filter((f: any) => {
     const d = (f.district || '').toLowerCase();
     return d.includes('berlinweit') || d === 'berlin';
@@ -186,13 +221,14 @@ export async function POST(req: Request) {
 
   const activeCandidates = candidateFacilities.length > 0
     ? candidateFacilities
-    : citywideFallback.slice(0, 4);
+    : citywideFallback.slice(0, 6);
 
-  // Kompakter Auszug für den Prompt (ID, Name, Typ, Bezirk)
+  // Compact manifest for LLM prompt
   const miniFacilities = activeCandidates.map((f: any) => ({
     id: f.id,
     name: f.name,
     typ: f.institutionType,
+    schwerpunkt: f.primaryFocus,
     bezirk: f.district || 'berlinweit',
   }));
 
@@ -206,51 +242,56 @@ export async function POST(req: Request) {
 
   try {
     const isMinor = input.clientAge !== undefined && input.clientAge < 18;
+    const cleanNotes = sanitizeNotes(input.notes);
 
     const systemPrompt = `
-Du bist ein erfahrener Berliner Sozialarbeiter. Erstelle einen präzisen, sozialrechtlich fundierten 2-3 stufigen Handlungsplan als valides JSON-Objekt.
+Du bist ein erfahrener Berliner Sozialarbeiter und Triage-Experte. Erstelle einen präzisen, sozialrechtlich fundierten 2-3 stufigen Handlungsplan als valides JSON-Objekt.
 
 WICHTIGE FACHLICHE REGELN:
-1. MINDERJÄHRIGE (unter 18 Jahren):
+1. MINDERJÄHRIGE (< 18 Jahre):
    - Zuständigkeit liegt AUSSCHLIESSLICH im SGB VIII (Kinder- und Jugendhilfe, RSD/Jugendamt, Erziehungsberatung).
    - NIEMALS Obdachlosenunterkünfte, § 67 SGB XII oder Jobcenter für Minderjährige vorschlagen!
-2. GESICHERTER WOHNRAUM / ELTERLICHER HAUSHALT:
-   - Keinerlei Notunterkünfte oder Wohnungslosenhilfe vorschlagen.
-3. THEMEN-FOKUS:
-   - Erfinde KEINE Sucht-, Gewalt- oder Schuldenprobleme, wenn diese im Fall nicht explizit genannt sind.
+2. HÄUSLICHE GEWALT:
+   - Bei häuslicher Gewalt hat der Schutz Vorrang: Immer Notfallkontakt BIG Hotline (030 611 03 00) oder Frauenkrisentelefon nennen.
+3. GESICHERTER WOHNRAUM:
+   - Bei vorhandenem Wohnraum keine Notunterkünfte zuweisen.
 4. BEHÖRDEN-ZUGANG:
    - Bei Ämtern (Jobcenter, Jugendamt, Sozialamt) immer darauf hinweisen: "Offene Notfallsprechstunde (Terminvereinbarung empfohlen)".
-
-Wähle für jeden Schritt 1 passende Einrichtungs-ID aus den vorausgewählten Möglichkeiten:
+5. ZUORDNUNG:
+   - Wähle für jeden Schritt eine passende facilityId AUSSCHLIESSLICH aus dieser Liste:
 ${JSON.stringify(miniFacilities)}
+   - Wenn keine Einrichtung aus der Liste exakt zum Schritt passt, setze "facilityId": null.
 
-JSON-SCHEMA (ausschließlich dieses Format ausgeben):
+JSON-SCHEMA:
 {
   "summary": "1 prägnanter Satz zur sozialrechtlichen Ersteinschätzung",
-  "legalContext": ["Rechtsgrundlagen, z.B. § 28 SGB VIII oder § 36 SGB XII"],
+  "legalContext": ["§§ Rechtsgrundlagen, z.B. § 8a SGB VIII oder § 36 SGB XII"],
   "steps": [
     {
-      "phase": "sofort",
+      "phase": "sofort" | "behoerde" | "beratung",
       "title": "Titel des Schritts",
-      "action": "Konkrete Handlungsanweisung",
+      "action": "Konkrete Handlungsanweisung für Fachkraft und Klient",
       "requiredDocs": ["Mitzubringende Unterlagen"],
-      "facilityId": "id-aus-liste"
+      "facilityId": "id-aus-liste" oder null
     }
   ]
 }
-Gültige Phasen: "sofort", "behoerde", "beratung".
 `;
 
     const userPrompt = `
 Klientendaten:
-- Alter: ${input.clientAge ?? 'Unbekannt'} ${isMinor ? '(MINDERJÄHRIG - SGB VIII beachten!)' : ''}
+- Alter: ${input.clientAge ?? 'Unbekannt'} ${isMinor ? '(MINDERJÄHRIG - SGB VIII ZWINGEND!)' : ''}
 - Meldebezirk: ${input.district || 'Ungeklärt / Berlin'}
 - Wohnsituation: ${input.housingStatus}
+- Aufenthaltsstatus: ${input.residenceStatus}
+- Leistungsbezug: ${input.benefitStatus}
 - Dringlichkeit: ${input.urgency}
 - Sucht-/SpDi-Bedarf: ${input.needsSubstanceOrMentalSupport ? 'JA' : 'NEIN'}
-- Häusliche Gewalt: ${input.isDomesticViolenceVictim ? 'JA' : 'NEIN'}
+- Häusliche Gewalt: ${input.isDomesticViolenceVictim ? 'JA - AKUTER SCHUTZBEDARF' : 'NEIN'}
 - Schulden: ${input.hasDebtIssues ? 'JA' : 'NEIN'}
-- Notizen/Besonderheiten: ${input.notes || 'Keine'}
+- Ausweis vorhanden: ${input.hasIdOrPassport ? 'JA' : 'NEIN'}
+- Krankenkasse vorhanden: ${input.hasHealthInsurance ? 'JA' : 'NEIN'}
+- Notizen / Fachkontext: ${cleanNotes}
 `;
 
     const response = await fetch(`${baseURL}/chat/completions`, {
@@ -280,7 +321,6 @@ Klientendaten:
     const aiData = await response.json();
     const rawContent = aiData.choices?.[0]?.message?.content || '{}';
 
-    // Eventuelle Markdown-Codeblöcke bereinigen
     let cleanedContent = rawContent.trim();
     if (cleanedContent.startsWith('```json')) {
       cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -291,25 +331,46 @@ Klientendaten:
     let parsed: any;
     try {
       parsed = JSON.parse(cleanedContent);
-    } catch (parseError) {
-      console.error('JSON-Parsing fehlgeschlagen für Inhalt:', cleanedContent);
+    } catch {
       return NextResponse.json(generateFallback(input, activeCandidates));
     }
 
-    // Schritte mit Einrichtungen anreichern
+    // Step facility enrichment with strict safety verification
     const stepsWithFacilities: TriageStep[] = (parsed.steps || []).map((step: any) => {
       let matched: Facility[] = [];
+      
       if (step.facilityId) {
         const found = allFacilities.find((f) => f.id === step.facilityId);
         if (found) matched.push(found);
       }
+
+      // If no valid ID was matched, attempt a conservative keyword match from activeCandidates
       if (matched.length === 0 && activeCandidates.length > 0) {
-        matched.push(activeCandidates[0]);
+        const titleLower = (step.title || '').toLowerCase();
+        const actionLower = (step.action || '').toLowerCase();
+        
+        const smartMatch = activeCandidates.find((c) => {
+          const nameLower = c.name.toLowerCase();
+          const subLower = (c.subTitle || '').toLowerCase();
+          return (
+            (titleLower.includes('jugend') && (nameLower.includes('jugend') || subLower.includes('jugend'))) ||
+            (titleLower.includes('krisen') && (nameLower.includes('krisen') || subLower.includes('krisen'))) ||
+            (titleLower.includes('notübernachtung') && (nameLower.includes('notübernachtung') || subLower.includes('notübernachtung'))) ||
+            (titleLower.includes('sozialamt') && (nameLower.includes('sozialamt') || subLower.includes('sozialamt'))) ||
+            (titleLower.includes('jobcenter') && (nameLower.includes('jobcenter') || subLower.includes('jobcenter'))) ||
+            (titleLower.includes('wohnungs') && (nameLower.includes('wohnungs') || subLower.includes('wohnungs')))
+          );
+        });
+
+        if (smartMatch) {
+          matched.push(smartMatch);
+        }
+        // Note: NEVER push a random candidate fallback if unconfident!
       }
 
       return {
         phase: step.phase || 'beratung',
-        title: step.title || 'Schritt',
+        title: step.title || 'Handlungsschritt',
         action: step.action || '',
         requiredDocs: step.requiredDocs || [],
         matchedFacilities: matched,
@@ -317,12 +378,12 @@ Klientendaten:
     });
 
     return NextResponse.json({
-      summary: parsed.summary || 'Stufenplan erstellt.',
+      summary: parsed.summary || 'Sozialrechtlicher Stufenplan erstellt.',
       legalContext: parsed.legalContext || [],
       steps: stepsWithFacilities,
     });
   } catch (err) {
-    console.error('Verarbeitungsfehler, nutze Fallback:', err);
+    console.error('Verarbeitungsfehler im Triage-Endpoint:', err);
     return NextResponse.json(generateFallback(input, activeCandidates));
   }
 }

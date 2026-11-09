@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: Request) {
+  // Rate limit: max 20 searches per 10 minutes per IP
+  const rateLimit = checkRateLimit(req, 20, 600000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Zu viele Suchanfragen. Bitte in ${rateLimit.resetInSec} Sekunden erneut versuchen.` },
+      { status: 429 }
+    );
+  }
+
   try {
     const { query } = await req.json();
 

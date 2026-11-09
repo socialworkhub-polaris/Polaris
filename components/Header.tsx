@@ -17,7 +17,7 @@ interface HeaderProps {
   counts: FacilityCounts;
   onResetFilters: () => void;
   hasActiveFilters: boolean;
-  dataSource?: 'notion' | 'mock';
+  dataSource?: 'supabase' | 'notion' | 'mock';
   onRefresh?: () => void;
   isLoading?: boolean;
   onOpenTriage?: () => void;
@@ -61,12 +61,20 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center flex-wrap gap-2 text-xs">
             
             {/* Status-Badge: Live vs. Demo */}
-            {dataSource === 'notion' ? (
+            {dataSource === 'supabase' ? (
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/70 text-emerald-300 border border-emerald-700/40 font-medium"
-                title="Aktiv mit Notion synchronisiert"
+                title="Aktiv mit Supabase PostgreSQL synchronisiert"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Live (Supabase)
+              </span>
+            ) : dataSource === 'notion' ? (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-950/70 text-blue-300 border border-blue-700/40 font-medium"
+                title="Aktiv mit Notion synchronisiert"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
                 Live (Notion)
               </span>
             ) : (

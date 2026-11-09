@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@notionhq/client": "^5.26.0",
+    "@supabase/supabase-js": "^2.119.0",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "firebase": "^12.19.0",
