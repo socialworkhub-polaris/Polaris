@@ -58,3 +58,33 @@ CREATE POLICY "Allow anon insert during setup"
     FOR INSERT
     TO anon
     WITH CHECK (true);
+
+-- =====================================================================
+-- Table: public.facility_edits (Crowdsourced corrections)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS public.facility_edits (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    facility_id TEXT NOT NULL,
+    facility_name TEXT NOT NULL,
+    suggested_changes TEXT NOT NULL,
+    contact_email TEXT DEFAULT '',
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.facility_edits ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public insert on facility_edits" ON public.facility_edits;
+CREATE POLICY "Allow public insert on facility_edits"
+    ON public.facility_edits
+    FOR INSERT
+    TO anon
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow service role all on facility_edits" ON public.facility_edits;
+CREATE POLICY "Allow service role all on facility_edits"
+    ON public.facility_edits
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);

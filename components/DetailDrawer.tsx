@@ -22,8 +22,10 @@ import {
   ShieldCheck,
   PhoneCall,
   Calendar,
+  Flag,
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
+import { ReportCorrectionModal } from './ReportCorrectionModal';
 
 interface DetailDrawerProps {
   facility: Facility | null;
@@ -39,6 +41,7 @@ export const DetailDrawer: React.FC<DetailDrawerProps> = ({
   onOpenPrint,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   if (!isOpen || !facility) return null;
 
@@ -353,25 +356,43 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
           {/* Footer Actions */}
           <div className="p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-between gap-3">
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"
+              type="button"
+              onClick={() => setIsReportOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"
             >
-              Schließen
+              <Flag className="w-3.5 h-3.5 text-amber-600" />
+              <span>Fehler melden</span>
             </button>
 
-            <button
-              onClick={() => {
-                onClose();
-                onOpenPrint(facility);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Klienten-Zettel drucken</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"
+              >
+                Schließen
+              </button>
+
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenPrint(facility);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Klienten-Zettel drucken</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Crowdsourced Report / Correction Modal */}
+      <ReportCorrectionModal
+        facility={facility}
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+      />
     </div>
   );
 };

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { Star, Building2, HeartHandshake, RefreshCw, Sparkles, FilterX } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, Building2, HeartHandshake, RefreshCw, Sparkles, FilterX, ShieldCheck } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
+import { LegalModal } from '@/components/LegalModal';
 
 export interface FacilityCounts {
   total: number;
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   isLoading = false,
   onOpenTriage,
 }) => {
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -158,12 +160,28 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
+            {/* Datenschutz & Recht Info Button */}
+            <button
+              type="button"
+              onClick={() => setIsLegalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-md transition-colors cursor-pointer text-xs"
+              title="Datenschutz, DSGVO & Rechtliche Hinweise"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">Datenschutz</span>
+            </button>
+
             {/* Benutzer-Profil */}
             <UserMenu />
           </div>
 
         </div>
       </div>
+
+      <LegalModal
+        isOpen={isLegalOpen}
+        onClose={() => setIsLegalOpen(false)}
+      />
     </header>
   );
 };
