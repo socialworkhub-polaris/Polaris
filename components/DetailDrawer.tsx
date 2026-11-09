@@ -43,6 +43,43 @@ export const DetailDrawer: React.FC<DetailDrawerProps> = ({
   const [copied, setCopied] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
 
+  const formatShareText = () => {
+    if (!facility) return '';
+    let text = `📍 *${facility.name}*`;
+    if (facility.subTitle) text += ` (${facility.subTitle})`;
+    text += `\n🏢 ${facility.address.street}, ${facility.address.zipCode} Berlin`;
+    if (facility.transit?.station) {
+      text += `\n🚇 ${facility.transit.station} (${facility.transit.lines.join(', ')}) - ${facility.transit.walkingTime}`;
+    }
+    if (facility.contact?.phone) {
+      text += `\n📞 Tel: ${facility.contact.phone}`;
+    }
+    if (facility.openingHours?.walkIn) {
+      text += `\n⏰ Offene Sprechzeiten: ${facility.openingHours.walkIn}`;
+    }
+    if (facility.requiredDocuments && facility.requiredDocuments.length > 0) {
+      text += `\n📄 Unterlagen mitbringen: ${facility.requiredDocuments.join(', ')}`;
+    }
+    text += `\n\n💡 Aus Polaris | SocialWorkHub (polaris-socialworkhub.net)`;
+    return text;
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = formatShareText();
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleCopyDetails = async () => {
+    const text = formatShareText();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.warn('Copy failed', e);
+    }
+  };
+
   if (!isOpen || !facility) return null;
 
   const isAmt = facility.institutionType === 'amt';
@@ -354,17 +391,41 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
           </div>
 
           {/* Footer Actions */}
-          <div className="p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setIsReportOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"
-            >
-              <Flag className="w-3.5 h-3.5 text-amber-600" />
-              <span>Fehler melden</span>
-            </button>
+          <div className="p-4 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsReportOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"
+                title="Fehler oder geänderte Öffnungszeiten melden"
+              >
+                <Flag className="w-3.5 h-3.5 text-amber-600" />
+                <span>Korrektur</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyDetails}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"
+                title="Adresse und Infos in Zwischenablage kopieren"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                <span>{copied ? 'Kopiert!' : 'Kopieren'}</span>
+              </button>
+            </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleShareWhatsApp}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-xs transition-colors cursor-pointer"
+                title="Direkt per WhatsApp an Klient*in oder Kolleg*in senden"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.99.54 1.777.818 2.796.818 3.18 0 5.767-2.587 5.767-5.766.001-3.182-2.585-5.767-5.767-5.767zm0 10.373c-.927 0-1.63-.24-2.482-.697l-.178-.096-1.579.414.421-1.539-.115-.184c-.538-.858-.823-1.603-.823-2.505 0-2.539 2.065-4.604 4.605-4.604 2.539 0 4.604 2.065 4.604 4.604 0 2.54-2.065 4.607-4.604 4.607z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </button>
               <button
                 onClick={onClose}
                 className="px-4 py-2 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-lg transition-colors cursor-pointer"

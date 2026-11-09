@@ -62,6 +62,73 @@ export default function TriageModal({ isOpen, onClose }: TriageModalProps) {
   const [exaResults, setExaResults] = useState<ExaResult[]>([]);
   const [exaError, setExaError] = useState<string | null>(null);
 
+  const handleSelectDemoCase = (type: 'pregnant_minor' | 'eu_homeless_winter' | 'domestic_violence') => {
+    if (type === 'pregnant_minor') {
+      setFormData({
+        clientAge: 17,
+        district: 'Mitte',
+        housingStatus: 'parental_home',
+        urgency: 'acute',
+        residenceStatus: 'german',
+        benefitStatus: 'none',
+        hasIdOrPassport: true,
+        hasPostalAddress: true,
+        hasBankAccount: true,
+        hasHealthInsurance: true,
+        hasPet: false,
+        hasMobilityImpairment: false,
+        hasDebtIssues: false,
+        hasChildrenInHousehold: false,
+        isPregnant: true,
+        isDomesticViolenceVictim: false,
+        needsSubstanceOrMentalSupport: false,
+        notes: 'Klientin ist 17 Jahre alt, im 5. Monat schwanger. Eltern fordern sofortigen Auszug bis morgen. RSD Jugendamt noch nicht eingeschaltet.',
+      });
+    } else if (type === 'eu_homeless_winter') {
+      setFormData({
+        clientAge: 38,
+        district: 'Friedrichshain-Kreuzberg',
+        housingStatus: 'homeless',
+        urgency: 'acute',
+        residenceStatus: 'eu_citizen',
+        benefitStatus: 'none',
+        hasIdOrPassport: true,
+        hasPostalAddress: false,
+        hasBankAccount: false,
+        hasHealthInsurance: false,
+        hasPet: false,
+        hasMobilityImpairment: false,
+        hasDebtIssues: false,
+        hasChildrenInHousehold: false,
+        isPregnant: false,
+        isDomesticViolenceVictim: false,
+        needsSubstanceOrMentalSupport: false,
+        notes: 'Polnischer Staatsangehöriger, seit 3 Monaten auf der Straße ohne Leistungsbezug. Akute Kältehilfe und medizinisches Clearing erforderlich.',
+      });
+    } else if (type === 'domestic_violence') {
+      setFormData({
+        clientAge: 31,
+        district: 'Neukölln',
+        housingStatus: 'precarious',
+        urgency: 'acute',
+        residenceStatus: 'german',
+        benefitStatus: 'none',
+        hasIdOrPassport: true,
+        hasPostalAddress: false,
+        hasBankAccount: true,
+        hasHealthInsurance: true,
+        hasPet: false,
+        hasMobilityImpairment: false,
+        hasDebtIssues: false,
+        hasChildrenInHousehold: true,
+        isPregnant: false,
+        isDomesticViolenceVictim: true,
+        needsSubstanceOrMentalSupport: false,
+        notes: 'Mutter mit zwei Kindern (3 und 6 Jahre) flieht vor gewalttätigem Partner. Dringend sichere Zufluchtswohnung oder Frauenhausplatz für heute Nacht benötigt.',
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -277,6 +344,36 @@ const handlePrint = () => {
         <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:pt-4">
           {!result ? (
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Pitch Demo Schnellstart Pills */}
+              <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Schnellstart / Demo-Fälle für Pitch (1-Klick):</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectDemoCase('pregnant_minor')}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-100 text-blue-800 border border-blue-200 transition shadow-2xs text-left"
+                  >
+                    👶 <strong>17-J. Schwangere</strong> (Rauswurf / SGB VIII)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectDemoCase('eu_homeless_winter')}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-100 text-blue-800 border border-blue-200 transition shadow-2xs text-left"
+                  >
+                    ❄️ <strong>EU-Bürger Winter</strong> (Straße / § 67 SGB XII)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectDemoCase('domestic_violence')}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-100 text-blue-800 border border-blue-200 transition shadow-2xs text-left"
+                  >
+                    🛡️ <strong>Häusliche Gewalt</strong> (Mutter + 2 Kinder)
+                  </button>
+                </div>
+              </div>
               
               {/* Block 1: Eckdaten */}
               <div>

@@ -9,7 +9,8 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, metadata?: Record<string, any>) => Promise<void>;
+  updateProfile: (data: Record<string, any>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signInWithEmail: async () => {},
   signUpWithEmail: async () => {},
+  updateProfile: async () => {},
   logout: async () => {},
 });
 
@@ -62,12 +64,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (error) throw error;
   };
 
-  const signUpWithEmail = async (email: string, pass: string) => {
+  const signUpWithEmail = async (email: string, pass: string, metadata?: Record<string, any>) => {
     const { error } = await supabase.auth.signUp({
       email,
       password: pass,
+      options: {
+        data: metadata,
+      },
     });
     if (error) throw error;
+  };
+
+  const updateProfile = async (data: Record<string, any>) => {
+    const { error } = await supabase.auth.updateUser({
+      data,
+    });
+    if (error) throw error;
+    // Refresh user state
+    const { data: { user: updatedUser } } = await supabase.auth.getUser();
+    setUser(updatedUser);
   };
 
   const logout = async () => {
@@ -82,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
+        updateProfile,
         logout,
       }}
     >

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Phone, ChevronDown, ChevronUp, ShieldAlert, HeartHandshake, Snowflake } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface Hotline {
   name: string;
@@ -53,6 +54,7 @@ const HOTLINES: Hotline[] = [
 
 export default function EmergencyBar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-700 shadow-2xl transition-all">
@@ -60,7 +62,7 @@ export default function EmergencyBar() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-slate-200 hover:text-white transition-colors"
-        aria-label="Notfall-Hotlines für Streetwork"
+        aria-label={t.hotlinesTitle}
       >
         <div className="flex items-center gap-2">
           <span className="flex h-2.5 w-2.5 relative">
@@ -68,11 +70,11 @@ export default function EmergencyBar() {
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
           </span>
           <span className="uppercase tracking-wider font-bold text-slate-100">
-            Streetwork Notfall-Hotlines (Berlin)
+            {t.hotlinesTitle}
           </span>
         </div>
         <div className="flex items-center gap-1 text-slate-400">
-          <span>{isOpen ? 'Schließen' : 'Schnellwahl (1-Tap)'}</span>
+          <span>{isOpen ? t.close : t.quickDial}</span>
           {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </div>
       </button>
@@ -81,7 +83,7 @@ export default function EmergencyBar() {
       {isOpen && (
         <div className="px-4 pb-4 pt-1 max-h-[60vh] overflow-y-auto space-y-2 border-t border-slate-800">
           <p className="text-[11px] text-slate-400 mb-2">
-            Direkte Notrufnummern für akute Gefährdungslagen im Außendienst. Direkter Anruf per Klick.
+            {t.hotlineSub}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {HOTLINES.map((h) => {

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { FilterState, InstitutionType, AccessType, PrimaryFocus, BerlinDistrict, AgeGroup } from '@/types/facility';
 import { BERLIN_DISTRICTS, PRIMARY_FOCUS_OPTIONS, AGE_GROUP_OPTIONS, COMMON_LANGUAGES } from '@/data/districts';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface FilterBarProps {
   filterState: FilterState;
@@ -44,6 +45,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 }) => {
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+  const { t } = useLanguage();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange({ ...filterState, searchQuery: e.target.value });
@@ -93,7 +95,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               type="text"
               value={filterState.searchQuery}
               onChange={handleSearchChange}
-              placeholder="Suche nach Name, Träger, Bezirk, § SGB..."
+              placeholder={t.searchPlaceholder}
               className="w-full h-9 pl-9 pr-8 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
             {filterState.searchQuery && (
@@ -119,7 +121,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             }`}
           >
             <Bookmark className={`w-3.5 h-3.5 ${showOnlyBookmarks ? 'fill-amber-500 text-amber-500' : 'text-slate-400'}`} />
-            <span className="hidden sm:inline">Favoriten</span>
+            <span className="hidden sm:inline">{t.favorites}</span>
           </button>
 
           {/* Kältehilfe Schnell-Filter (Saisonal) */}
@@ -134,7 +136,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             title="Nur Notübernachtungen, Wärmestuben und Kältehilfe-Angebote anzeigen"
           >
             <Snowflake className={`w-3.5 h-3.5 ${filterState.kaeltehilfeOnly ? 'animate-pulse text-white' : 'text-cyan-600'}`} />
-            <span>Kältehilfe</span>
+            <span>{t.coldRelief}</span>
           </button>
         </div>
 
@@ -149,7 +151,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Alle
+            {t.allInstitutions}
           </button>
           <button
             type="button"
@@ -161,7 +163,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             }`}
           >
             <Building2 className="w-3.5 h-3.5 shrink-0" />
-            <span>Behörden / Ämter</span>
+            <span>{t.authoritiesTab}</span>
           </button>
           <button
             type="button"
@@ -173,7 +175,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             }`}
           >
             <HeartHandshake className="w-3.5 h-3.5 shrink-0" />
-            <span>Freie Träger</span>
+            <span>{t.agenciesTab}</span>
           </button>
         </div>
 
@@ -188,7 +190,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 filterState.accessType === 'all' ? 'bg-white text-slate-900 font-semibold shadow-2xs' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Alle Zugänge
+              {t.allAccess}
             </button>
             <button
               type="button"
@@ -200,7 +202,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               }`}
             >
               <DoorOpen className="w-3 h-3" />
-              <span>Walk-In</span>
+              <span>{t.walkIn}</span>
             </button>
             <button
               type="button"
@@ -212,7 +214,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               }`}
             >
               <Calendar className="w-3 h-3" />
-              <span>Termin</span>
+              <span>{t.appointment}</span>
             </button>
             <button
               type="button"
@@ -224,7 +226,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               }`}
             >
               <FileCheck2 className="w-3 h-3" />
-              <span>Antrag (SGB)</span>
+              <span>{t.application}</span>
             </button>
           </div>
 
@@ -235,7 +237,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               onChange={(e) => handleFocusChange(e.target.value as 'all' | PrimaryFocus)}
               className="w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded-md text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="all">Alle Schwerpunkte</option>
+              <option value="all">{t.allFocus}</option>
               {PRIMARY_FOCUS_OPTIONS.map((opt) => (
                 <option key={opt.id} value={opt.id}>
                   {opt.label}

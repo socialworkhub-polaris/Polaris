@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/AuthContext';
+import { LanguageProvider } from '@/lib/LanguageContext';
 import PWARegister from '@/components/PWARegister';
 
 export const metadata: Metadata = {
@@ -30,10 +31,12 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body>
-        <AuthProvider>
-          <PWARegister />
-          {children}
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <PWARegister />
+            {children}
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

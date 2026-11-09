@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Star, Building2, HeartHandshake, RefreshCw, Sparkles, FilterX, ShieldCheck, CreditCard } from 'lucide-react';
+import { Star, Building2, HeartHandshake, RefreshCw, Sparkles, FilterX, ShieldCheck, CreditCard, Globe, MessageSquare } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
 import { LegalModal } from '@/components/LegalModal';
 import LicenseModal from '@/components/LicenseModal';
+import FeedbackModal from '@/components/FeedbackModal';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export interface FacilityCounts {
   total: number;
@@ -36,6 +38,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const { lang, setLang, t } = useLanguage();
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -158,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-md shadow-sm transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5 text-blue-200" />
-                <span>Smart Triage</span>
+                <span>{t.smartTriage}</span>
               </button>
             )}
 
@@ -170,7 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Team-Lizenz für Träger & Einrichtungen"
             >
               <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Lizenz erwerben</span>
+              <span>{t.getLicense}</span>
             </button>
 
             {/* Datenschutz & Recht Info Button */}
@@ -181,8 +185,39 @@ export const Header: React.FC<HeaderProps> = ({
               title="Datenschutz, DSGVO & Rechtliche Hinweise"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden sm:inline">Datenschutz</span>
+              <span className="hidden sm:inline">{t.privacy}</span>
             </button>
+
+            {/* Feedback Button */}
+            <button
+              type="button"
+              onClick={() => setIsFeedbackOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-md transition-colors cursor-pointer text-xs"
+              title="Feedback oder Feature-Idee melden"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline">{t.giveFeedback}</span>
+            </button>
+
+            {/* Language Switcher (DE | EN) */}
+            <div className="inline-flex items-center p-0.5 rounded-md bg-slate-800 border border-slate-700 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setLang('de')}
+                className={`px-1.5 py-0.5 rounded transition ${lang === 'de' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                title="Auf Deutsch umschalten"
+              >
+                DE
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`px-1.5 py-0.5 rounded transition ${lang === 'en' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                title="Switch to English"
+              >
+                EN
+              </button>
+            </div>
 
             {/* Benutzer-Profil */}
             <UserMenu />
@@ -199,6 +234,11 @@ export const Header: React.FC<HeaderProps> = ({
       <LicenseModal
         isOpen={isLicenseOpen}
         onClose={() => setIsLicenseOpen(false)}
+      />
+
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
       />
     </header>
   );
