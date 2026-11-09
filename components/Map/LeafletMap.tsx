@@ -154,7 +154,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   onOpenPrint,
 }) => {
   const berlinCenter: [number, number] = [52.518, 13.405];
-  const protomapsKey = process.env.NEXT_PUBLIC_PROTOMAPS_API_KEY || '411822e93f07bac5';
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const protomapsKey = process.env.NEXT_PUBLIC_PROTOMAPS_API_KEY;
 
   return (
     <div className="relative w-full h-full">
@@ -165,7 +166,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         className="w-full h-full z-10"
         style={{ minHeight: '100%', background: '#e2e8f0' }}
       >
-        {protomapsKey ? (
+        {mapboxToken ? (
+          <TileLayer
+            attribution='&copy; <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+            url={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`}
+            tileSize={256}
+            maxZoom={19}
+          />
+        ) : protomapsKey ? (
           <ProtomapsLayer apiKey={protomapsKey} />
         ) : (
           <TileLayer
