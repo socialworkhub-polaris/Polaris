@@ -64,84 +64,89 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header ref={headerRef} className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5">
         <div className="flex items-center justify-between gap-4">
           
-          {/* Logo & Titel */}
-          <div className="flex items-center space-x-3 shrink-0">
-            <div className="p-2 bg-blue-600 text-white rounded-xl shadow-inner flex items-center justify-center">
-              <Star className="w-5 h-5 text-blue-100 fill-blue-200/40" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight text-white">
-                  Polaris
-                </h1>
-                <span className="px-2 py-0.5 text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full hidden sm:inline-block">
-                  Sozialarbeit Triage
-                </span>
+          {/* Linker Bereich: Logo, Titel & Aktions-Buttons nebeneinander */}
+          <div className="flex items-center gap-3 sm:gap-4 md:gap-5 flex-wrap">
+            
+            {/* Logo & Titel */}
+            <div className="flex items-center space-x-3 shrink-0">
+              <div className="p-2 bg-blue-600 text-white rounded-xl shadow-inner flex items-center justify-center">
+                <Star className="w-5 h-5 text-blue-100 fill-blue-200/40" />
               </div>
-              <p className="text-xs text-slate-400 hidden md:block">
-                Schnittstelle zwischen Ämtern & freien Trägern
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-bold tracking-tight text-white">
+                    Polaris
+                  </h1>
+                  <span className="px-2 py-0.5 text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full hidden sm:inline-block">
+                    Sozialarbeit Triage
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 hidden xl:block">
+                  Schnittstelle zwischen Ämtern & freien Trägern
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Navigation & Aktionen */}
-          <div className="flex items-center gap-2 sm:gap-2.5 text-xs">
-            {/* Smart Triage Button */}
-            {onOpenTriage && (
+            {/* Buttons gruppiert auf der linken Seite */}
+            <div className="flex items-center gap-2 sm:gap-2.5 text-xs flex-wrap">
+              {/* Smart Triage Button */}
+              {onOpenTriage && (
+                <button
+                  type="button"
+                  onClick={onOpenTriage}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer shrink-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+                  <span>{t.smartTriage}</span>
+                </button>
+              )}
+
+              {/* Lizenz erwerben Button */}
               <button
                 type="button"
-                onClick={onOpenTriage}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer shrink-0"
+                onClick={() => setIsLicenseOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-emerald-300 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 rounded-lg transition-colors cursor-pointer text-xs font-medium shrink-0"
+                title="Team-Lizenz für Träger & Einrichtungen"
               >
-                <Sparkles className="w-3.5 h-3.5 text-blue-200" />
-                <span>{t.smartTriage}</span>
+                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{t.getLicense}</span>
               </button>
-            )}
 
-            {/* Lizenz erwerben Button */}
-            <button
-              type="button"
-              onClick={() => setIsLicenseOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-emerald-300 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 rounded-lg transition-colors cursor-pointer text-xs font-medium shrink-0"
-              title="Team-Lizenz für Träger & Einrichtungen"
-            >
-              <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{t.getLicense}</span>
-            </button>
+              {/* Datenschutz & Impressum Button mit Outline */}
+              <button
+                type="button"
+                onClick={() => setIsLegalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs"
+                title="Datenschutz, Impressum & Rechtliche Hinweise"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden md:inline">{t.privacy}</span>
+              </button>
 
-            {/* Datenschutz & Impressum Button */}
-            <button
-              type="button"
-              onClick={() => setIsLegalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer text-xs shrink-0"
-              title="Datenschutz, Impressum & Rechtliche Hinweise"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden lg:inline">{t.privacy}</span>
-            </button>
+              {/* Feedback Button mit Outline */}
+              <button
+                type="button"
+                onClick={() => setIsFeedbackOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs"
+                title="Feedback oder Feature-Idee melden"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden md:inline">{t.giveFeedback}</span>
+              </button>
+            </div>
 
-            {/* Feedback Button */}
-            <button
-              type="button"
-              onClick={() => setIsFeedbackOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer text-xs shrink-0"
-              title="Feedback oder Feature-Idee melden"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden lg:inline">{t.giveFeedback}</span>
-            </button>
+          </div>
 
-            {/* Trennlinie */}
-            <div className="h-4 w-px bg-slate-700/80 mx-0.5 hidden sm:block" />
-
+          {/* Rechter Bereich: Auth (Anmelden) & Language Switcher */}
+          <div className="flex items-center gap-2 sm:gap-2.5 text-xs shrink-0 ml-auto">
             {/* Benutzer-Profil / Anmelden */}
             <UserMenu />
 
             {/* Language Switcher (DE | EN) - Ganz rechts */}
-            <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-800/90 border border-slate-700/80 text-[11px] font-bold shrink-0 ml-0.5">
+            <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-800/90 border border-slate-700/80 text-[11px] font-bold shrink-0">
               <button
                 type="button"
                 onClick={() => setLang('de')}
@@ -159,7 +164,6 @@ export const Header: React.FC<HeaderProps> = ({
                 EN
               </button>
             </div>
-
           </div>
 
         </div>
