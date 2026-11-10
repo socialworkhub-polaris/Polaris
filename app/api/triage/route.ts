@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { TriageInput, TriageResponse, TriageStep } from '@/types/triage';
 import { Facility } from '@/types/facility';
 import { MOCK_FACILITIES } from '@/data/facilities';
-import { fetchFacilitiesFromSupabase } from '@/lib/supabase';
+import { supabase, fetchFacilitiesFromSupabase } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 // Helper: Matches district string with borough aliases
@@ -183,14 +184,184 @@ function generateFallback(input: TriageInput, candidates: Facility[]): TriageRes
   };
 }
 
+// ---------------------------------------------------------------------
+// GET /api/triage: Check current user's monthly quota status
+// ---------------------------------------------------------------------
+export async function GET(req: Request) {
+  const authHeader = req.headers.get('authorization') || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  if (!token) {
+    return NextResponse.json({
+      authenticated: false,
+      allowed: false,
+      unlimited: false,
+      used: 0,
+      max: 3,
+    });
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return NextResponse.json({
+      authenticated: false,
+      allowed: false,
+      unlimited: false,
+      used: 0,
+      max: 3,
+    });
+  }
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  try {
+    const userClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      }
+    );
+
+    const { data: statusData, error: statusErr } = await userClient.rpc('get_triage_status', {
+      p_month_year: currentMonth,
+      p_max_allowed: 3,
+    });
+
+    if (!statusErr && statusData) {
+      return NextResponse.json(statusData);
+    }
+
+    // Direct fallback query
+    const { data: row } = await userClient
+      .from('user_triage_usage')
+      .select('count')
+      .eq('user_id', userData.user.id)
+      .eq('month_year', currentMonth)
+      .maybeSingle();
+
+    const used = row?.count || 0;
+    return NextResponse.json({
+      authenticated: true,
+      allowed: used < 3,
+      unlimited: false,
+      used,
+      max: 3,
+    });
+  } catch {
+    return NextResponse.json({
+      authenticated: true,
+      allowed: true,
+      unlimited: false,
+      used: 0,
+      max: 3,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------
+// POST /api/triage: AI Inference with Auth & Quota Enforcement
+// ---------------------------------------------------------------------
 export async function POST(req: Request) {
-  // Rate limit: max 20 triage requests per 10 minutes per IP
+  // 1. IP rate limiting
   const rateLimit = checkRateLimit(req, 20, 600000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: `Zu viele Triage-Anfragen. Bitte in ${rateLimit.resetInSec} Sekunden erneut versuchen.` },
       { status: 429 }
     );
+  }
+
+  // 2. Authentication check (Bearer Token)
+  const authHeader = req.headers.get('authorization') || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  if (!token) {
+    return NextResponse.json(
+      {
+        error: 'AUTH_REQUIRED',
+        message: 'Bitte erstelle ein kostenloses Fachkraft-Konto oder melde dich an, um die KI-Triage zu nutzen.',
+      },
+      { status: 401 }
+    );
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return NextResponse.json(
+      {
+        error: 'AUTH_REQUIRED',
+        message: 'Sitzung abgelaufen. Bitte erneut anmelden.',
+      },
+      { status: 401 }
+    );
+  }
+
+  // 3. Monthly Triage Quota Check (Max 3 / Month for free users)
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  let usageInfo = { allowed: true, unlimited: false, used: 1, max: 3 };
+
+  try {
+    const userClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      }
+    );
+
+    const { data: limitData, error: limitErr } = await userClient.rpc('check_and_increment_triage', {
+      p_month_year: currentMonth,
+      p_max_allowed: 3,
+    });
+
+    if (limitErr) {
+      console.warn('RPC check_and_increment_triage fallback:', limitErr.message);
+      const { data: row } = await userClient
+        .from('user_triage_usage')
+        .select('count')
+        .eq('user_id', userData.user.id)
+        .eq('month_year', currentMonth)
+        .maybeSingle();
+
+      const currentCount = row?.count || 0;
+      if (currentCount >= 3) {
+        return NextResponse.json(
+          {
+            error: 'LIMIT_REACHED',
+            used: currentCount,
+            max: 3,
+            message: 'Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht.',
+          },
+          { status: 403 }
+        );
+      }
+
+      await userClient.from('user_triage_usage').upsert(
+        {
+          user_id: userData.user.id,
+          month_year: currentMonth,
+          count: currentCount + 1,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,month_year' }
+      );
+      usageInfo = { allowed: true, unlimited: false, used: currentCount + 1, max: 3 };
+    } else if (limitData) {
+      if (!limitData.allowed) {
+        return NextResponse.json(
+          {
+            error: 'LIMIT_REACHED',
+            used: limitData.used,
+            max: limitData.max,
+            message: 'Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht.',
+          },
+          { status: 403 }
+        );
+      }
+      usageInfo = limitData;
+    }
+  } catch (err) {
+    console.warn('Could not verify triage quota:', err);
   }
 
   let input: TriageInput;
@@ -381,9 +552,13 @@ Klientendaten:
       summary: parsed.summary || 'Sozialrechtlicher Stufenplan erstellt.',
       legalContext: parsed.legalContext || [],
       steps: stepsWithFacilities,
+      usage: usageInfo,
     });
   } catch (err) {
     console.error('Verarbeitungsfehler im Triage-Endpoint:', err);
-    return NextResponse.json(generateFallback(input, activeCandidates));
+    return NextResponse.json({
+      ...generateFallback(input, activeCandidates),
+      usage: usageInfo,
+    });
   }
 }
