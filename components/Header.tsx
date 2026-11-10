@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare } from 'lucide-react';
+import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare, ClipboardList } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
 import { LegalModal } from '@/components/LegalModal';
 import LicenseModal from '@/components/LicenseModal';
 import FeedbackModal from '@/components/FeedbackModal';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTeam } from '@/lib/TeamContext';
 
 export interface FacilityCounts {
   total: number;
@@ -25,6 +26,7 @@ interface HeaderProps {
   onRefresh?: () => void;
   isLoading?: boolean;
   onOpenTriage?: () => void;
+  onOpenTeamHub?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,11 +37,14 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   isLoading = false,
   onOpenTriage,
+  onOpenTeamHub,
 }) => {
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
+  const { currentOrganization, announcements } = useTeam();
+  const hasUrgentOrPinned = announcements.some((a) => a.isPinned || a.priority === 'urgent');
   const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -92,6 +97,22 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Buttons gruppiert auf der linken Seite */}
             <div className="flex items-center gap-2 sm:gap-2.5 text-xs flex-wrap">
+              {/* Schwarzes Brett & Dienstübergabe Button */}
+              {currentOrganization && onOpenTeamHub && (
+                <button
+                  type="button"
+                  onClick={onOpenTeamHub}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer shrink-0"
+                  title={`Schwarzes Brett & Dienstübergabe (${currentOrganization.name})`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5 text-indigo-200" />
+                  <span>Schwarzes Brett</span>
+                  {hasUrgentOrPinned && (
+                    <span className="w-2 h-2 rounded-full bg-rose-400 ring-2 ring-indigo-900 animate-pulse" />
+                  )}
+                </button>
+              )}
+
               {/* Smart Triage Button */}
               {onOpenTriage && (
                 <button

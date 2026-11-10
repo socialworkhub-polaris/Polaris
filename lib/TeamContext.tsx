@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
-import { Organization, OrganizationMember, FacilityTeamNote, NoteCategory } from '@/types/team';
+import { Organization, OrganizationMember, FacilityTeamNote, NoteCategory, TeamAnnouncement, AnnouncementPriority } from '@/types/team';
 
 interface TeamContextType {
   organizations: Organization[];
@@ -22,6 +22,13 @@ interface TeamContextType {
   deleteNote: (noteId: string) => Promise<void>;
   togglePinNote: (noteId: string, currentPin: boolean) => Promise<void>;
   refreshTeamNotesCount: () => Promise<void>;
+  announcements: TeamAnnouncement[];
+  loadAnnouncements: () => Promise<void>;
+  createAnnouncement: (title: string, content: string, priority: AnnouncementPriority, isPinned?: boolean) => Promise<TeamAnnouncement>;
+  deleteAnnouncement: (id: string) => Promise<void>;
+  togglePinAnnouncement: (id: string, currentPin: boolean) => Promise<void>;
+  allTeamFacilityNotes: FacilityTeamNote[];
+  loadAllTeamFacilityNotes: () => Promise<void>;
 }
 
 const TeamContext = createContext<TeamContextType>({
@@ -41,6 +48,13 @@ const TeamContext = createContext<TeamContextType>({
   deleteNote: async () => {},
   togglePinNote: async () => {},
   refreshTeamNotesCount: async () => {},
+  announcements: [],
+  loadAnnouncements: async () => {},
+  createAnnouncement: async () => { throw new Error('Not initialized'); },
+  deleteAnnouncement: async () => {},
+  togglePinAnnouncement: async () => {},
+  allTeamFacilityNotes: [],
+  loadAllTeamFacilityNotes: async () => {},
 });
 
 export const useTeam = () => useContext(TeamContext);
@@ -51,6 +65,8 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentOrganization, setCurrentOrganizationState] = useState<Organization | null>(null);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [notesCountByFacility, setNotesCountByFacility] = useState<Record<string, number>>({});
+  const [announcements, setAnnouncements] = useState<TeamAnnouncement[]>([]);
+  const [allTeamFacilityNotes, setAllTeamFacilityNotes] = useState<FacilityTeamNote[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Set current organization and persist to localStorage
@@ -472,6 +488,176 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw new Error(error.message);
   };
 
+
+  // 12. Load general team announcements (Dienstübergabe / Schwarzes Brett)
+  const loadAnnouncements = useCallback(async () => {
+    if (!currentOrganization) {
+      setAnnouncements([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('team_announcements')
+        .select('*')
+        .eq('organization_id', currentOrganization.id)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setAnnouncements(
+          data.map((row: any) => ({
+            id: row.id,
+            organizationId: row.organization_id,
+            authorId: row.author_id,
+            authorName: row.author_name,
+            priority: row.priority as AnnouncementPriority,
+            title: row.title,
+            content: row.content,
+            isPinned: !!row.is_pinned,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Error loading announcements:', err);
+    }
+  }, [currentOrganization]);
+
+  useEffect(() => {
+    loadAnnouncements();
+  }, [loadAnnouncements]);
+
+  // 13. Create new team announcement
+  const createAnnouncement = async (
+    title: string,
+    content: string,
+    priority: AnnouncementPriority = 'info',
+    isPinned: boolean = false
+  ): Promise<TeamAnnouncement> => {
+    if (!user || !currentOrganization) {
+      throw new Error('Kein aktives Team ausgewählt.');
+    }
+
+    const trimmedTitle = title.trim();
+    const trimmedContent = content.trim();
+    if (!trimmedTitle || !trimmedContent) {
+      throw new Error('Titel und Inhalt dürfen nicht leer sein.');
+    }
+
+    const authorName = (
+      user.user_metadata?.full_name ||
+      user.email?.split('@')[0] ||
+      'Kolleg*in'
+    ).trim();
+
+    const { data, error } = await supabase
+      .from('team_announcements')
+      .insert({
+        organization_id: currentOrganization.id,
+        author_id: user.id,
+        author_name: authorName,
+        priority,
+        title: trimmedTitle,
+        content: trimmedContent,
+        is_pinned: isPinned,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    const created: TeamAnnouncement = {
+      id: data.id,
+      organizationId: data.organization_id,
+      authorId: data.author_id,
+      authorName: data.author_name,
+      priority: data.priority as AnnouncementPriority,
+      title: data.title,
+      content: data.content,
+      isPinned: data.is_pinned,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    setAnnouncements((prev) => [created, ...prev]);
+    return created;
+  };
+
+  // 14. Delete announcement
+  const deleteAnnouncement = async (id: string): Promise<void> => {
+    if (!currentOrganization) return;
+
+    const { error } = await supabase
+      .from('team_announcements')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', currentOrganization.id);
+
+    if (error) throw new Error(error.message);
+
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  // 15. Toggle pin announcement
+  const togglePinAnnouncement = async (id: string, currentPin: boolean): Promise<void> => {
+    if (!currentOrganization) return;
+
+    const { error } = await supabase
+      .from('team_announcements')
+      .update({ is_pinned: !currentPin })
+      .eq('id', id)
+      .eq('organization_id', currentOrganization.id);
+
+    if (error) throw new Error(error.message);
+
+    setAnnouncements((prev) =>
+      prev
+        .map((a) => (a.id === id ? { ...a, isPinned: !currentPin } : a))
+        .sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
+    );
+  };
+
+  // 16. Load all facility notes written across Berlin for this team (Einrichtungs-Ticker)
+  const loadAllTeamFacilityNotes = useCallback(async () => {
+    if (!currentOrganization) {
+      setAllTeamFacilityNotes([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('facility_team_notes')
+        .select('*')
+        .eq('organization_id', currentOrganization.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setAllTeamFacilityNotes(
+          data.map((row: any) => ({
+            id: row.id,
+            facilityId: row.facility_id,
+            organizationId: row.organization_id,
+            authorId: row.author_id,
+            authorName: row.author_name,
+            category: row.category as NoteCategory,
+            content: row.content,
+            isPinned: !!row.is_pinned,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Error loading all facility notes:', err);
+    }
+  }, [currentOrganization]);
+
+  useEffect(() => {
+    loadAllTeamFacilityNotes();
+  }, [loadAllTeamFacilityNotes]);
+
   return (
     <TeamContext.Provider
       value={{
@@ -491,6 +677,13 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteNote,
         togglePinNote,
         refreshTeamNotesCount,
+        announcements,
+        loadAnnouncements,
+        createAnnouncement,
+        deleteAnnouncement,
+        togglePinAnnouncement,
+        allTeamFacilityNotes,
+        loadAllTeamFacilityNotes,
       }}
     >
       {children}

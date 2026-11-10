@@ -2,6 +2,8 @@ export type TeamRole = 'admin' | 'member';
 
 export type NoteCategory = 'contact_person' | 'intake_tip' | 'warning' | 'general';
 
+export type AnnouncementPriority = 'urgent' | 'important' | 'info';
+
 export interface Organization {
   id: string;
   name: string;
@@ -29,6 +31,21 @@ export interface FacilityTeamNote {
   authorId: string;
   authorName: string;
   category: NoteCategory;
+  content: string;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  facilityName?: string;
+  facilityDistrict?: string;
+}
+
+export interface TeamAnnouncement {
+  id: string;
+  organizationId: string;
+  authorId: string;
+  authorName: string;
+  priority: AnnouncementPriority;
+  title: string;
   content: string;
   isPinned: boolean;
   createdAt: string;

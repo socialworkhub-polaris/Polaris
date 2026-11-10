@@ -14,6 +14,7 @@ import { useBookmarks } from '@/lib/useBookmarks';
 import TriageModal from '@/components/TriageModal';
 import EmergencyBar from '@/components/EmergencyBar';
 import { TeamModal } from '@/components/TeamModal';
+import { TeamHubModal } from '@/components/TeamHubModal';
 
 const INITIAL_FILTERS: FilterState = {
   searchQuery: '',
@@ -43,6 +44,7 @@ export default function Home() {
   const [isTriageOpen, setIsTriageOpen] = useState(false);
   const [joinCode, setJoinCode] = useState<string>('');
   const [isDeepLinkJoinOpen, setIsDeepLinkJoinOpen] = useState(false);
+  const [isTeamHubOpen, setIsTeamHubOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -221,6 +223,7 @@ export default function Home() {
         isLoading={isLoading}
         onRefresh={loadFacilities}
         onOpenTriage={() => setIsTriageOpen(true)}
+        onOpenTeamHub={() => setIsTeamHubOpen(true)}
       />
 
      {/* Main Split-View Workspace */}
@@ -329,6 +332,21 @@ export default function Home() {
         isOpen={isDeepLinkJoinOpen}
         onClose={() => setIsDeepLinkJoinOpen(false)}
         initialCode={joinCode}
+      />
+
+      {/* Team-Zentrale / Schwarzes Brett Modal */}
+      <TeamHubModal
+        isOpen={isTeamHubOpen}
+        onClose={() => setIsTeamHubOpen(false)}
+        facilities={facilities}
+        onSelectFacilityAndOpen={(facility) => {
+          setIsTeamHubOpen(false);
+          handleOpenDetails(facility);
+        }}
+        onOpenTeamSettings={() => {
+          setIsTeamHubOpen(false);
+          setIsDeepLinkJoinOpen(true);
+        }}
       />
     </div>
   );
