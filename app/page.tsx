@@ -251,6 +251,7 @@ export default function Home() {
               onOpenPrint={handleOpenPrint}
               onResetFilters={handleResetFilters}
               searchQuery={filterState.searchQuery}
+              totalCount={facilities.length}
             />
           </div>
         </div>

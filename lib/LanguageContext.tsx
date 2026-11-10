@@ -9,7 +9,7 @@ export const translations = {
     // Header
     smartTriage: 'Smart Triage',
     getLicense: 'Lizenz erwerben',
-    privacy: 'Datenschutz',
+    privacy: 'Datenschutz & Impressum',
     signIn: 'Anmelden',
     signOut: 'Abmelden',
     filterReset: 'Filter lösen',
@@ -52,7 +52,7 @@ export const translations = {
     // Header
     smartTriage: 'Smart Triage',
     getLicense: 'Get Team License',
-    privacy: 'Privacy & Legal',
+    privacy: 'Privacy & Legal Notice',
     signIn: 'Sign In',
     signOut: 'Sign Out',
     filterReset: 'Reset Filters',

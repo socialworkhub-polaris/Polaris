@@ -6,6 +6,7 @@ import { useTeam } from '../lib/TeamContext';
 import { LogIn, LogOut, User as UserIcon, X, Building2, Briefcase, MapPin, Check, Edit2, Users } from 'lucide-react';
 import { BERLIN_DISTRICTS } from '@/data/districts';
 import { TeamModal } from './TeamModal';
+import { useLanguage } from '@/lib/LanguageContext';
 
 const WORK_AREAS = [
   'Keine Angabe / Prefer not to share',
@@ -21,6 +22,7 @@ const WORK_AREAS = [
 export default function UserMenu() {
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, updateProfile, logout } = useAuth();
   const { currentOrganization } = useTeam();
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -121,10 +123,10 @@ export default function UserMenu() {
       <>
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-xs font-medium transition shadow-sm"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-xs font-semibold transition-all shadow-sm hover:shadow cursor-pointer shrink-0"
         >
-          <LogIn className="w-3.5 h-3.5" />
-          <span>Anmelden</span>
+          <LogIn className="w-3.5 h-3.5 text-blue-600" />
+          <span>{t.signIn}</span>
         </button>
 
         {isOpen && (

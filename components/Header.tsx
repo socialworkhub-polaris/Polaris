@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Star, Building2, HeartHandshake, RefreshCw, Sparkles, FilterX, ShieldCheck, CreditCard, Globe, MessageSquare } from 'lucide-react';
+import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
 import { LegalModal } from '@/components/LegalModal';
 import LicenseModal from '@/components/LicenseModal';
@@ -18,9 +18,9 @@ export interface FacilityCounts {
 }
 
 interface HeaderProps {
-  counts: FacilityCounts;
-  onResetFilters: () => void;
-  hasActiveFilters: boolean;
+  counts?: FacilityCounts;
+  onResetFilters?: () => void;
+  hasActiveFilters?: boolean;
   dataSource?: 'supabase' | 'notion' | 'mock';
   onRefresh?: () => void;
   isLoading?: boolean;
@@ -64,11 +64,11 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header ref={headerRef} className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+        <div className="flex items-center justify-between gap-4">
           
           {/* Logo & Titel */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 shrink-0">
             <div className="p-2 bg-blue-600 text-white rounded-xl shadow-inner flex items-center justify-center">
               <Star className="w-5 h-5 text-blue-100 fill-blue-200/40" />
             </div>
@@ -77,111 +77,24 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 className="text-lg font-bold tracking-tight text-white">
                   Polaris
                 </h1>
-                <span className="px-2 py-0.5 text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full">
+                <span className="px-2 py-0.5 text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-full hidden sm:inline-block">
                   Sozialarbeit Triage
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 hidden md:block">
                 Schnittstelle zwischen Ämtern & freien Trägern
               </p>
             </div>
           </div>
 
-          {/* Badges, Zähler & Aktionen */}
-          <div className="flex items-center flex-wrap gap-2 text-xs">
-            
-            {/* Status-Badge: Live vs. Demo */}
-            {dataSource === 'supabase' ? (
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/70 text-emerald-300 border border-emerald-700/40 font-medium"
-                title="Aktiv mit Supabase PostgreSQL synchronisiert"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Live (Supabase)
-              </span>
-            ) : dataSource === 'notion' ? (
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-950/70 text-blue-300 border border-blue-700/40 font-medium"
-                title="Aktiv mit Notion synchronisiert"
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                Live (Notion)
-              </span>
-            ) : (
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-950/70 text-amber-300 border border-amber-700/40 font-medium"
-                title="Mock-Datenmodus aktiv"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                Demo-Daten
-              </span>
-            )}
-
-            {/* Treffer-Gesamtzähler */}
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 font-medium text-slate-200">
-              <span className="text-slate-400">Treffer:</span>
-              <span className="font-semibold text-white">
-                {counts.filtered}
-              </span>
-              <span className="text-slate-500">/ {counts.total}</span>
-            </div>
-
-            {/* Ämter-Zähler */}
-            <div
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/80 text-slate-300"
-              title={`${counts.filteredAmt} von ${counts.totalAmt} Ämtern/Behörden`}
-            >
-              <Building2 className="w-3.5 h-3.5 text-blue-400" />
-              <span>Ämter:</span>
-              <span className="font-semibold text-blue-300">
-                {counts.filteredAmt}
-              </span>
-            </div>
-
-            {/* Freie Träger-Zähler */}
-            <div
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/80 text-slate-300"
-              title={`${counts.filteredTraeger} von ${counts.totalTraeger} Freien Trägern/NGOs`}
-            >
-              <HeartHandshake className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Träger:</span>
-              <span className="font-semibold text-emerald-300">
-                {counts.filteredTraeger}
-              </span>
-            </div>
-
-            {/* Filter zurücksetzen Button (erscheint nur bei aktivem Filter) */}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={onResetFilters}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 transition-colors cursor-pointer"
-                title="Alle Filter zurücksetzen"
-              >
-                <FilterX className="w-3.5 h-3.5" />
-                <span>Filter lösen</span>
-              </button>
-            )}
-
-            {/* Datenbank neu laden */}
-            {onRefresh && (
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={isLoading}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
-                title="Datenbank aktualisieren"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-blue-400' : ''}`} />
-              </button>
-            )}
-
+          {/* Navigation & Aktionen */}
+          <div className="flex items-center gap-2 sm:gap-2.5 text-xs">
             {/* Smart Triage Button */}
             {onOpenTriage && (
               <button
                 type="button"
                 onClick={onOpenTriage}
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-md shadow-sm transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer shrink-0"
               >
                 <Sparkles className="w-3.5 h-3.5 text-blue-200" />
                 <span>{t.smartTriage}</span>
@@ -192,41 +105,47 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => setIsLicenseOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-emerald-300 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 rounded-md transition-colors cursor-pointer text-xs font-medium"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-emerald-300 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 rounded-lg transition-colors cursor-pointer text-xs font-medium shrink-0"
               title="Team-Lizenz für Träger & Einrichtungen"
             >
               <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
               <span>{t.getLicense}</span>
             </button>
 
-            {/* Datenschutz & Recht Info Button */}
+            {/* Datenschutz & Impressum Button */}
             <button
               type="button"
               onClick={() => setIsLegalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-md transition-colors cursor-pointer text-xs"
-              title="Datenschutz, DSGVO & Rechtliche Hinweise"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer text-xs shrink-0"
+              title="Datenschutz, Impressum & Rechtliche Hinweise"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden sm:inline">{t.privacy}</span>
+              <span className="hidden lg:inline">{t.privacy}</span>
             </button>
 
             {/* Feedback Button */}
             <button
               type="button"
               onClick={() => setIsFeedbackOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-md transition-colors cursor-pointer text-xs"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer text-xs shrink-0"
               title="Feedback oder Feature-Idee melden"
             >
               <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">{t.giveFeedback}</span>
+              <span className="hidden lg:inline">{t.giveFeedback}</span>
             </button>
 
-            {/* Language Switcher (DE | EN) */}
-            <div className="inline-flex items-center p-0.5 rounded-md bg-slate-800 border border-slate-700 text-[11px] font-bold">
+            {/* Trennlinie */}
+            <div className="h-4 w-px bg-slate-700/80 mx-0.5 hidden sm:block" />
+
+            {/* Benutzer-Profil / Anmelden */}
+            <UserMenu />
+
+            {/* Language Switcher (DE | EN) - Ganz rechts */}
+            <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-800/90 border border-slate-700/80 text-[11px] font-bold shrink-0 ml-0.5">
               <button
                 type="button"
                 onClick={() => setLang('de')}
-                className={`px-1.5 py-0.5 rounded transition ${lang === 'de' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                className={`px-2 py-0.5 rounded transition ${lang === 'de' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
                 title="Auf Deutsch umschalten"
               >
                 DE
@@ -234,15 +153,13 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setLang('en')}
-                className={`px-1.5 py-0.5 rounded transition ${lang === 'en' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
+                className={`px-2 py-0.5 rounded transition ${lang === 'en' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'}`}
                 title="Switch to English"
               >
                 EN
               </button>
             </div>
 
-            {/* Benutzer-Profil */}
-            <UserMenu />
           </div>
 
         </div>

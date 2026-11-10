@@ -22,6 +22,7 @@ interface FacilityListProps {
   onToggleExpanded?: () => void;
   hasActiveAdvancedFilters?: boolean;
   searchQuery?: string;
+  totalCount?: number;
 }
 
 export const FacilityList: React.FC<FacilityListProps> = ({
@@ -35,6 +36,7 @@ export const FacilityList: React.FC<FacilityListProps> = ({
   onToggleExpanded,
   hasActiveAdvancedFilters = false,
   searchQuery = '',
+  totalCount,
 }) => {
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'district'>('default');
   const [exaLoading, setExaLoading] = useState(false);
@@ -75,8 +77,16 @@ export const FacilityList: React.FC<FacilityListProps> = ({
 
   return (
     <div className="flex flex-col">
-      {/* Sub-Header mit Filter & Sortierung */}
+      {/* Sub-Header mit Trefferanzahl, Filter & Sortierung */}
       <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-600">
+        <div className="flex items-center gap-1.5 font-medium text-slate-700">
+          <span className="font-bold text-slate-900">{facilities.length}</span>
+          <span>{facilities.length === 1 ? 'Einrichtung' : 'Einrichtungen'}</span>
+          {totalCount !== undefined && totalCount > facilities.length && (
+            <span className="text-slate-400 text-[11px]">(von {totalCount})</span>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           {onToggleExpanded && (
             <button
