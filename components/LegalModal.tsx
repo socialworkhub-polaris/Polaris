@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ShieldCheck, FileText, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { X, ShieldCheck, FileText, AlertTriangle, ExternalLink } from 'lucide-react';
 
 interface LegalModalProps {
   isOpen: boolean;
@@ -142,11 +143,15 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
           {activeTab === 'impressum' && (
             <div className="space-y-3">
-              <h4 className="font-bold text-slate-900 text-sm mb-1">Angaben gemäß § 5 TMG</h4>
+              <h4 className="font-bold text-slate-900 text-sm mb-1">Angaben gemäß § 5 DDG</h4>
               <p>
-                <strong>SocialWorkHub · Polaris Initiative</strong><br />
-                E-Mail: contact@socialworkhub.net<br />
-                Webseite: https://polaris-socialworkhub.net
+                <strong>Polaris · SocialWorkHub Initiative</strong><br />
+                Maximilian Breith<br />
+                Hauptstraße 8<br />
+                66953 Pirmasens<br />
+                Telefon: +49 155 6767 8327<br />
+                E-Mail: socialworkhub@proton.me<br />
+                Webseite: https://polaris-socialworkhub.net / https://socialworkhub-polaris.net
               </p>
               <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200">
                 Plattform zur Navigation und Triage im Berliner Sozialsystem für Fachkräfte der Sozialen Arbeit.
@@ -156,7 +161,25 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3.5 bg-slate-100 border-t border-slate-200 flex justify-end">
+        <div className="p-3.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-3 text-[11px]">
+            <Link
+              href="/datenschutz"
+              target="_blank"
+              className="text-blue-600 hover:underline inline-flex items-center gap-1 font-medium"
+            >
+              Vollständige Datenschutzerklärung
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+            <span className="text-slate-300">·</span>
+            <Link
+              href="/impressum"
+              target="_blank"
+              className="text-slate-600 hover:underline"
+            >
+              Impressum
+            </Link>
+          </div>
           <button
             type="button"
             onClick={onClose}
