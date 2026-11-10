@@ -14,9 +14,11 @@ import {
   Copy,
   Check,
   Bookmark,
+  Users,
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
 import { useBookmarks } from '../lib/useBookmarks';
+import { useTeam } from '../lib/TeamContext';
 
 interface FacilityCardProps {
   facility: Facility;
@@ -35,9 +37,11 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const { isBookmarked, toggleBookmark } = useBookmarks();
+  const { notesCountByFacility, currentOrganization } = useTeam();
   const bookmarked = isBookmarked(facility.id);
   const isAmt = facility.institutionType === 'amt';
   const isNiedrigschwellig = facility.accessType === 'niedrigschwellig';
+  const teamNotesCount = currentOrganization ? (notesCountByFacility[facility.id] || 0) : 0;
 
   // Formatierter Vermerk für Falldokumentation (SoPart, LISSA etc.)
   const handleCopyNote = (e: React.MouseEvent) => {
@@ -109,6 +113,17 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
               <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
               {facility.district}
             </span>
+
+            {/* Team Notes Indicator Badge */}
+            {teamNotesCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded shadow-2xs"
+                title={`${teamNotesCount} interne Team-Notiz(en) für ${currentOrganization?.name}`}
+              >
+                <Users className="w-3 h-3 text-indigo-600 shrink-0" />
+                <span>{teamNotesCount} {teamNotesCount === 1 ? 'Team-Notiz' : 'Team-Notizen'}</span>
+              </span>
+            )}
           </div>
 
           {/* Bookmark Button */}

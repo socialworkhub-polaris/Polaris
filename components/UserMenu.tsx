@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { LogIn, LogOut, User as UserIcon, X, Building2, Briefcase, MapPin, Check, Edit2 } from 'lucide-react';
+import { useTeam } from '../lib/TeamContext';
+import { LogIn, LogOut, User as UserIcon, X, Building2, Briefcase, MapPin, Check, Edit2, Users } from 'lucide-react';
 import { BERLIN_DISTRICTS } from '@/data/districts';
+import { TeamModal } from './TeamModal';
 
 const WORK_AREAS = [
   'Keine Angabe / Prefer not to share',
@@ -18,9 +20,11 @@ const WORK_AREAS = [
 
 export default function UserMenu() {
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, updateProfile, logout } = useAuth();
+  const { currentOrganization } = useTeam();
   const [isOpen, setIsOpen] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -319,6 +323,23 @@ export default function UserMenu() {
   return (
     <>
       <div className="flex items-center gap-1.5">
+        {/* Active Team Workspace Button */}
+        <button
+          type="button"
+          onClick={() => setIsTeamModalOpen(true)}
+          title="Team-Workspaces & Träger-Notizen"
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition border cursor-pointer ${
+            currentOrganization
+              ? 'bg-indigo-950/70 text-indigo-300 border-indigo-700/60 hover:bg-indigo-900/80 shadow-xs'
+              : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="max-w-[110px] truncate">
+            {currentOrganization ? currentOrganization.name : 'Team beitreten'}
+          </span>
+        </button>
+
         <button
           onClick={openProfileEdit}
           title="Fachkraft-Profil bearbeiten"
@@ -460,6 +481,12 @@ export default function UserMenu() {
           </div>
         </div>
       )}
+
+      {/* Team Spaces Modal */}
+      <TeamModal
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
+      />
     </>
   );
 }

@@ -1,0 +1,499 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/AuthContext';
+import { Organization, OrganizationMember, FacilityTeamNote, NoteCategory } from '@/types/team';
+
+interface TeamContextType {
+  organizations: Organization[];
+  currentOrganization: Organization | null;
+  setCurrentOrganization: (org: Organization | null) => void;
+  loading: boolean;
+  createTeam: (name: string) => Promise<Organization>;
+  joinTeamByCode: (code: string) => Promise<Organization>;
+  leaveTeam: (orgId: string) => Promise<void>;
+  members: OrganizationMember[];
+  loadMembers: () => Promise<void>;
+  removeMember: (memberId: string) => Promise<void>;
+  notesCountByFacility: Record<string, number>;
+  fetchNotesForFacility: (facilityId: string) => Promise<FacilityTeamNote[]>;
+  addNoteForFacility: (facilityId: string, category: NoteCategory, content: string) => Promise<FacilityTeamNote>;
+  deleteNote: (noteId: string) => Promise<void>;
+  togglePinNote: (noteId: string, currentPin: boolean) => Promise<void>;
+  refreshTeamNotesCount: () => Promise<void>;
+}
+
+const TeamContext = createContext<TeamContextType>({
+  organizations: [],
+  currentOrganization: null,
+  setCurrentOrganization: () => {},
+  loading: true,
+  createTeam: async () => { throw new Error('Not initialized'); },
+  joinTeamByCode: async () => { throw new Error('Not initialized'); },
+  leaveTeam: async () => {},
+  members: [],
+  loadMembers: async () => {},
+  removeMember: async () => {},
+  notesCountByFacility: {},
+  fetchNotesForFacility: async () => [],
+  addNoteForFacility: async () => { throw new Error('Not initialized'); },
+  deleteNote: async () => {},
+  togglePinNote: async () => {},
+  refreshTeamNotesCount: async () => {},
+});
+
+export const useTeam = () => useContext(TeamContext);
+
+export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [currentOrganization, setCurrentOrganizationState] = useState<Organization | null>(null);
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [notesCountByFacility, setNotesCountByFacility] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Set current organization and persist to localStorage
+  const setCurrentOrganization = useCallback((org: Organization | null) => {
+    setCurrentOrganizationState(org);
+    if (typeof window !== 'undefined') {
+      if (org) {
+        localStorage.setItem('polaris_active_team_id', org.id);
+      } else {
+        localStorage.removeItem('polaris_active_team_id');
+      }
+    }
+  }, []);
+
+  // 1. Load user's organizations
+  const loadUserOrganizations = useCallback(async () => {
+    if (!user) {
+      setOrganizations([]);
+      setCurrentOrganizationState(null);
+      setMembers([]);
+      setNotesCountByFacility({});
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Fetch organization_members join with organizations
+      const { data: memberData, error: memberErr } = await supabase
+        .from('organization_members')
+        .select(`
+          role,
+          organization:organizations (
+            id,
+            name,
+            slug,
+            invite_code,
+            plan,
+            created_at
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (memberErr) {
+        console.warn('Could not load organizations:', memberErr.message);
+        setOrganizations([]);
+        setCurrentOrganizationState(null);
+        return;
+      }
+
+      if (memberData && memberData.length > 0) {
+        const orgList: Organization[] = memberData
+          .filter((m: any) => m.organization)
+          .map((m: any) => ({
+            id: m.organization.id,
+            name: m.organization.name,
+            slug: m.organization.slug,
+            inviteCode: m.organization.invite_code,
+            plan: m.organization.plan,
+            role: m.role,
+            createdAt: m.organization.created_at,
+          }));
+
+        setOrganizations(orgList);
+
+        // Restore previously selected team from localStorage or default to first
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem('polaris_active_team_id') : null;
+        const matching = orgList.find((o) => o.id === savedId);
+        setCurrentOrganizationState(matching || orgList[0] || null);
+      } else {
+        setOrganizations([]);
+        setCurrentOrganizationState(null);
+      }
+    } catch (err) {
+      console.warn('Error fetching organizations:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadUserOrganizations();
+  }, [loadUserOrganizations]);
+
+  // 2. Load members of active organization
+  const loadMembers = useCallback(async () => {
+    if (!currentOrganization || !user) {
+      setMembers([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('organization_members')
+        .select('id, organization_id, user_id, role, user_email, user_name, joined_at')
+        .eq('organization_id', currentOrganization.id)
+        .order('joined_at', { ascending: true });
+
+      if (!error && data) {
+        setMembers(
+          data.map((m: any) => ({
+            id: m.id,
+            organizationId: m.organization_id,
+            userId: m.user_id,
+            role: m.role,
+            userEmail: m.user_email || 'Kolleg*in',
+            userName: m.user_name || m.user_email?.split('@')[0] || 'Team-Mitglied',
+            joinedAt: m.joined_at,
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Error loading team members:', err);
+    }
+  }, [currentOrganization, user]);
+
+  useEffect(() => {
+    loadMembers();
+  }, [loadMembers]);
+
+  // 3. Load aggregated team notes counts for all facilities
+  const refreshTeamNotesCount = useCallback(async () => {
+    if (!currentOrganization) {
+      setNotesCountByFacility({});
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('facility_team_notes')
+        .select('facility_id')
+        .eq('organization_id', currentOrganization.id);
+
+      if (!error && data) {
+        const counts: Record<string, number> = {};
+        data.forEach((row: any) => {
+          counts[row.facility_id] = (counts[row.facility_id] || 0) + 1;
+        });
+        setNotesCountByFacility(counts);
+      }
+    } catch (err) {
+      console.warn('Error fetching notes count:', err);
+    }
+  }, [currentOrganization]);
+
+  useEffect(() => {
+    refreshTeamNotesCount();
+  }, [refreshTeamNotesCount]);
+
+  // Helper: Generate clean 6-character uppercase alphanumeric code (e.g. BER72K)
+  const generateInviteCode = (name: string): string => {
+    const prefix = name
+      .replace(/[^a-zA-Z]/g, '')
+      .slice(0, 3)
+      .toUpperCase()
+      .padEnd(3, 'X');
+    const randomChars = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${prefix}${randomChars}`;
+  };
+
+  // 4. Create new Team
+  const createTeam = async (name: string): Promise<Organization> => {
+    if (!user) throw new Error('Bitte melden Sie sich an, um ein Team zu erstellen.');
+    const trimmedName = name.trim();
+    if (!trimmedName) throw new Error('Bitte geben Sie einen Team-Namen ein.');
+
+    const inviteCode = generateInviteCode(trimmedName);
+    const userEmail = user.email || '';
+    const userName = (user.user_metadata?.full_name || user.email?.split('@')[0] || 'Sozialarbeiter*in').trim();
+
+    // Call stored procedure or direct insert
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('create_team', {
+      p_name: trimmedName,
+      p_invite_code: inviteCode,
+      p_user_email: userEmail,
+      p_user_name: userName,
+    });
+
+    if (rpcErr) {
+      // Fallback to direct table inserts if RPC not available
+      const slug = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const { data: org, error: orgErr } = await supabase
+        .from('organizations')
+        .insert({
+          name: trimmedName,
+          slug,
+          invite_code: inviteCode,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (orgErr) throw new Error(orgErr.message);
+
+      await supabase.from('organization_members').insert({
+        organization_id: org.id,
+        user_id: user.id,
+        role: 'admin',
+        user_email: userEmail,
+        user_name: userName,
+      });
+
+      const newOrg: Organization = {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        inviteCode: org.invite_code,
+        role: 'admin',
+        createdAt: org.created_at,
+      };
+
+      setOrganizations((prev) => [newOrg, ...prev]);
+      setCurrentOrganization(newOrg);
+      return newOrg;
+    }
+
+    const created: Organization = {
+      id: rpcData.id,
+      name: rpcData.name,
+      slug: rpcData.slug,
+      inviteCode: rpcData.invite_code,
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+    };
+
+    setOrganizations((prev) => [created, ...prev]);
+    setCurrentOrganization(created);
+    return created;
+  };
+
+  // 5. Join Team by 6-char Code
+  const joinTeamByCode = async (code: string): Promise<Organization> => {
+    if (!user) throw new Error('Bitte melden Sie sich an, um einem Team beizutreten.');
+    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode) throw new Error('Bitte geben Sie einen gültigen Team-Code ein.');
+
+    const userEmail = user.email || '';
+    const userName = (user.user_metadata?.full_name || user.email?.split('@')[0] || 'Sozialarbeiter*in').trim();
+
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('join_team_by_code', {
+      p_code: cleanCode,
+      p_user_email: userEmail,
+      p_user_name: userName,
+    });
+
+    if (rpcErr) {
+      throw new Error(rpcErr.message || 'Ungültiger Team-Code oder Beitritt fehlgeschlagen.');
+    }
+
+    const joinedOrg: Organization = {
+      id: rpcData.id,
+      name: rpcData.name,
+      slug: rpcData.slug,
+      inviteCode: rpcData.invite_code,
+      role: rpcData.role as 'admin' | 'member',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Add to organizations list if not already present
+    setOrganizations((prev) => {
+      const exists = prev.some((o) => o.id === joinedOrg.id);
+      return exists ? prev : [joinedOrg, ...prev];
+    });
+
+    setCurrentOrganization(joinedOrg);
+    return joinedOrg;
+  };
+
+  // 6. Leave Team
+  const leaveTeam = async (orgId: string): Promise<void> => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('organization_members')
+      .delete()
+      .eq('organization_id', orgId)
+      .eq('user_id', user.id);
+
+    if (error) throw new Error(error.message);
+
+    setOrganizations((prev) => prev.filter((o) => o.id !== orgId));
+    if (currentOrganization?.id === orgId) {
+      const remaining = organizations.filter((o) => o.id !== orgId);
+      setCurrentOrganization(remaining[0] || null);
+    }
+  };
+
+  // 7. Remove Member (Admin action)
+  const removeMember = async (memberId: string): Promise<void> => {
+    if (!currentOrganization || !user) return;
+
+    const { error } = await supabase
+      .from('organization_members')
+      .delete()
+      .eq('id', memberId)
+      .eq('organization_id', currentOrganization.id);
+
+    if (error) throw new Error(error.message);
+
+    setMembers((prev) => prev.filter((m) => m.id !== memberId));
+  };
+
+  // 8. Fetch Notes for specific facility
+  const fetchNotesForFacility = async (facilityId: string): Promise<FacilityTeamNote[]> => {
+    if (!currentOrganization) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('facility_team_notes')
+        .select('*')
+        .eq('organization_id', currentOrganization.id)
+        .eq('facility_id', facilityId)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Error fetching facility team notes:', error.message);
+        return [];
+      }
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        facilityId: row.facility_id,
+        organizationId: row.organization_id,
+        authorId: row.author_id,
+        authorName: row.author_name,
+        category: row.category as NoteCategory,
+        content: row.content,
+        isPinned: !!row.is_pinned,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (err) {
+      console.warn('Error loading notes:', err);
+      return [];
+    }
+  };
+
+  // 9. Add Note for facility
+  const addNoteForFacility = async (
+    facilityId: string,
+    category: NoteCategory,
+    content: string
+  ): Promise<FacilityTeamNote> => {
+    if (!user || !currentOrganization) {
+      throw new Error('Bitte wählen Sie ein aktives Team aus, um Notizen zu verfassen.');
+    }
+
+    const trimmed = content.trim();
+    if (!trimmed) throw new Error('Bitte geben Sie einen Hinweistext ein.');
+
+    const authorName = (
+      user.user_metadata?.full_name ||
+      user.email?.split('@')[0] ||
+      'Kolleg*in'
+    ).trim();
+
+    const { data, error } = await supabase
+      .from('facility_team_notes')
+      .insert({
+        facility_id: facilityId,
+        organization_id: currentOrganization.id,
+        author_id: user.id,
+        author_name: authorName,
+        category,
+        content: trimmed,
+        is_pinned: false,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    // Increment notes count
+    setNotesCountByFacility((prev) => ({
+      ...prev,
+      [facilityId]: (prev[facilityId] || 0) + 1,
+    }));
+
+    return {
+      id: data.id,
+      facilityId: data.facility_id,
+      organizationId: data.organization_id,
+      authorId: data.author_id,
+      authorName: data.author_name,
+      category: data.category as NoteCategory,
+      content: data.content,
+      isPinned: data.is_pinned,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  };
+
+  // 10. Delete Note
+  const deleteNote = async (noteId: string): Promise<void> => {
+    if (!currentOrganization) return;
+
+    const { error } = await supabase
+      .from('facility_team_notes')
+      .delete()
+      .eq('id', noteId)
+      .eq('organization_id', currentOrganization.id);
+
+    if (error) throw new Error(error.message);
+
+    refreshTeamNotesCount();
+  };
+
+  // 11. Toggle Pin
+  const togglePinNote = async (noteId: string, currentPin: boolean): Promise<void> => {
+    if (!currentOrganization) return;
+
+    const { error } = await supabase
+      .from('facility_team_notes')
+      .update({ is_pinned: !currentPin })
+      .eq('id', noteId)
+      .eq('organization_id', currentOrganization.id);
+
+    if (error) throw new Error(error.message);
+  };
+
+  return (
+    <TeamContext.Provider
+      value={{
+        organizations,
+        currentOrganization,
+        setCurrentOrganization,
+        loading,
+        createTeam,
+        joinTeamByCode,
+        leaveTeam,
+        members,
+        loadMembers,
+        removeMember,
+        notesCountByFacility,
+        fetchNotesForFacility,
+        addNoteForFacility,
+        deleteNote,
+        togglePinNote,
+        refreshTeamNotesCount,
+      }}
+    >
+      {children}
+    </TeamContext.Provider>
+  );
+};

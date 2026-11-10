@@ -13,6 +13,7 @@ import { List, Map as MapIcon } from 'lucide-react';
 import { useBookmarks } from '@/lib/useBookmarks';
 import TriageModal from '@/components/TriageModal';
 import EmergencyBar from '@/components/EmergencyBar';
+import { TeamModal } from '@/components/TeamModal';
 
 const INITIAL_FILTERS: FilterState = {
   searchQuery: '',
@@ -40,6 +41,19 @@ export default function Home() {
   const [printFacility, setPrintFacility] = useState<Facility | null>(null);
   const [mobileTab, setMobileTab] = useState<'list' | 'map'>('list');
   const [isTriageOpen, setIsTriageOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState<string>('');
+  const [isDeepLinkJoinOpen, setIsDeepLinkJoinOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('join');
+      if (code) {
+        setJoinCode(code.trim().toUpperCase());
+        setIsDeepLinkJoinOpen(true);
+      }
+    }
+  }, []);
 
   // Load facilities from /api/facilities (Notion or Mock fallback)
   const loadFacilities = async () => {
@@ -305,6 +319,13 @@ export default function Home() {
       <TriageModal
         isOpen={isTriageOpen}
         onClose={() => setIsTriageOpen(false)}
+      />
+
+      {/* Deep-link Team Join Modal */}
+      <TeamModal
+        isOpen={isDeepLinkJoinOpen}
+        onClose={() => setIsDeepLinkJoinOpen(false)}
+        initialCode={joinCode}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/AuthContext';
+import { TeamProvider } from '@/lib/TeamContext';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import PWARegister from '@/components/PWARegister';
 
@@ -33,8 +34,10 @@ export default function RootLayout({
       <body>
         <LanguageProvider>
           <AuthProvider>
-            <PWARegister />
-            {children}
+            <TeamProvider>
+              <PWARegister />
+              {children}
+            </TeamProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>

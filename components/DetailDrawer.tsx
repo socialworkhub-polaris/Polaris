@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
 import { ReportCorrectionModal } from './ReportCorrectionModal';
+import { TeamNotesSection } from './TeamNotesSection';
+import { TeamModal } from './TeamModal';
 
 interface DetailDrawerProps {
   facility: Facility | null;
@@ -42,6 +44,7 @@ export const DetailDrawer: React.FC<DetailDrawerProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
   const formatShareText = () => {
     if (!facility) return '';
@@ -388,6 +391,13 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
                 {facility.internalWorkerNotes}
               </p>
             </div>
+
+            {/* Shared Team Intelligence */}
+            <TeamNotesSection
+              facilityId={facility.id}
+              facilityName={facility.name}
+              onOpenTeamModal={() => setIsTeamModalOpen(true)}
+            />
           </div>
 
           {/* Footer Actions */}
@@ -453,6 +463,12 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
         facility={facility}
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
+      />
+
+      {/* Team Spaces Modal */}
+      <TeamModal
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
       />
     </div>
   );
