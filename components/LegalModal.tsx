@@ -145,13 +145,13 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             <div className="space-y-3">
               <h4 className="font-bold text-slate-900 text-sm mb-1">Angaben gemäß § 5 DDG</h4>
               <p>
-                <strong>Polaris · SocialWorkHub Initiative</strong><br />
+                <strong>Polaris by Socialworkhub</strong><br />
                 Maximilian Breith<br />
                 Hauptstraße 8<br />
                 66953 Pirmasens<br />
                 Telefon: +49 155 6767 8327<br />
                 E-Mail: socialworkhub@proton.me<br />
-                Webseite: https://polaris-socialworkhub.net / https://socialworkhub-polaris.net
+                Webseite: https://polaris-socialworkhub.net
               </p>
               <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200">
                 Plattform zur Navigation und Triage im Berliner Sozialsystem für Fachkräfte der Sozialen Arbeit.

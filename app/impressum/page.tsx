@@ -51,7 +51,7 @@ export default function ImpressumPage() {
         <section className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xs space-y-5 text-xs text-slate-700 leading-relaxed">
           <div>
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Dienstanbieter</h2>
-            <p className="font-bold text-slate-900 text-base">Polaris · SocialWorkHub Initiative</p>
+            <p className="font-bold text-slate-900 text-base">Polaris by Socialworkhub</p>
             <p className="font-semibold text-slate-800 text-sm mt-0.5">Maximilian Breith</p>
             <p className="text-slate-600">Hauptstraße 8</p>
             <p className="text-slate-600">66953 Pirmasens</p>
@@ -70,7 +70,7 @@ export default function ImpressumPage() {
             </p>
             <p className="flex items-center gap-2 text-slate-700">
               <Globe className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>Internet: <a href="https://polaris-socialworkhub.net" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://polaris-socialworkhub.net</a> / <a href="https://socialworkhub-polaris.net" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://socialworkhub-polaris.net</a></span>
+              <span>Internet: <a href="https://polaris-socialworkhub.net" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://polaris-socialworkhub.net</a></span>
             </p>
           </div>
 
@@ -105,7 +105,7 @@ export default function ImpressumPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-center text-xs text-slate-500 space-y-1">
-        <p>© {new Date().getFullYear()} Polaris · SocialWorkHub Initiative</p>
+        <p>© {new Date().getFullYear()} Polaris by Socialworkhub</p>
         <div className="space-x-4">
           <Link href="/" className="hover:text-slate-900 underline">Startseite</Link>
           <Link href="/datenschutz" className="hover:text-slate-900 underline">Datenschutz</Link>

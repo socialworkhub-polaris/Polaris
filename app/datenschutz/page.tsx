@@ -50,7 +50,7 @@ export default function DatenschutzPage() {
             Datenschutzerklärung / Privacy Policy
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Gültig für <strong>Polaris</strong> (socialworkhub-polaris.net / polaris-socialworkhub.net) · Stand: November 2026
+            Gültig für <strong>Polaris by Socialworkhub</strong> (https://polaris-socialworkhub.net) · Stand: November 2026
           </p>
         </div>
 
@@ -85,12 +85,12 @@ export default function DatenschutzPage() {
             Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) und anderer nationaler Datenschutzgesetze der Mitgliedsstaaten sowie sonstiger datenschutzrechtlicher Bestimmungen ist:
           </p>
           <div className="bg-white border border-slate-200 p-4 rounded-xl text-xs text-slate-800 space-y-1 shadow-xs">
-            <p className="font-bold text-slate-900 text-sm">Polaris · SocialWorkHub Initiative</p>
+            <p className="font-bold text-slate-900 text-sm">Polaris by Socialworkhub</p>
             <p className="font-semibold text-slate-800">Maximilian Breith</p>
             <p className="text-slate-600">Hauptstraße 8, 66953 Pirmasens, Deutschland</p>
             <p className="text-slate-600">Telefon: +49 155 6767 8327</p>
             <p>E-Mail: <a href="mailto:socialworkhub@proton.me" className="text-blue-600 underline">socialworkhub@proton.me</a></p>
-            <p>Webseite: <a href="https://polaris-socialworkhub.net" className="text-blue-600 underline">https://polaris-socialworkhub.net</a> / <a href="https://socialworkhub-polaris.net" className="text-blue-600 underline">https://socialworkhub-polaris.net</a></p>
+            <p>Webseite: <a href="https://polaris-socialworkhub.net" className="text-blue-600 underline">https://polaris-socialworkhub.net</a></p>
             <p className="text-slate-500 pt-1">
               (Vollständige Angaben gemäß § 5 DDG siehe <Link href="/impressum" className="text-blue-600 underline">Impressum</Link>)
             </p>
@@ -270,7 +270,7 @@ export default function DatenschutzPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-center text-xs text-slate-500 space-y-1">
-        <p>© {new Date().getFullYear()} Polaris · SocialWorkHub Initiative</p>
+        <p>© {new Date().getFullYear()} Polaris by Socialworkhub</p>
         <div className="space-x-4">
           <Link href="/" className="hover:text-slate-900 underline">Startseite</Link>
           <Link href="/datenschutz" className="hover:text-slate-900 underline font-semibold">Datenschutz</Link>
