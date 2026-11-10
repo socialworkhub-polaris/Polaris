@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Facility } from '@/types/facility';
 import { FacilityCard } from './FacilityCard';
-import { SearchX, ArrowUpDown, Filter, ChevronDown, ChevronUp, Globe, ExternalLink, Loader2 } from 'lucide-react';
+import { SearchX, ArrowUpDown, Filter, ChevronDown, ChevronUp, Globe, ExternalLink, Loader2, Bookmark } from 'lucide-react';
 
 interface ExaResult {
   title: string;
@@ -23,6 +23,7 @@ interface FacilityListProps {
   hasActiveAdvancedFilters?: boolean;
   searchQuery?: string;
   totalCount?: number;
+  showOnlyBookmarks?: boolean;
 }
 
 export const FacilityList: React.FC<FacilityListProps> = ({
@@ -37,6 +38,7 @@ export const FacilityList: React.FC<FacilityListProps> = ({
   hasActiveAdvancedFilters = false,
   searchQuery = '',
   totalCount,
+  showOnlyBookmarks = false,
 }) => {
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'district'>('default');
   const [exaLoading, setExaLoading] = useState(false);
@@ -138,43 +140,64 @@ export const FacilityList: React.FC<FacilityListProps> = ({
       <div className="p-4 space-y-3.5">
         {sortedFacilities.length === 0 ? (
           <div className="space-y-4">
-            <div className="bg-white rounded-xl border border-dashed border-slate-300 p-6 sm:p-8 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-                <SearchX className="w-6 h-6" />
-              </div>
-              <h4 className="text-sm font-bold text-slate-800">Keine lokalen Einrichtungen in Notion gefunden</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                {searchQuery
-                  ? `In den hinterlegten 120 Einrichtungen gibt es keinen Treffer für „${searchQuery}“.`
-                  : 'Für die gewählten Filterkriterien gibt es aktuell keinen Eintrag.'}
-              </p>
-
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                {searchQuery && (
+            {showOnlyBookmarks ? (
+              <div className="bg-white rounded-xl border border-dashed border-amber-200 p-6 sm:p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto text-amber-500">
+                  <Bookmark className="w-6 h-6 fill-amber-500/20" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-800">Noch keine Favoriten gespeichert</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Klicken Sie auf das Lesezeichen-Symbol einer Einrichtung, um sie hier für den schnellen Zugriff zu speichern.
+                </p>
+                <div className="pt-2">
                   <button
                     type="button"
-                    onClick={handleExaFallbackSearch}
-                    disabled={exaLoading}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    onClick={onResetFilters}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                   >
-                    {exaLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Globe className="w-3.5 h-3.5" />
-                    )}
-                    <span>Im Berliner Web suchen (Exa)</span>
+                    Alle Einrichtungen anzeigen
                   </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={onResetFilters}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-                >
-                  Filter zurücksetzen
-                </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-dashed border-slate-300 p-6 sm:p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                  <SearchX className="w-6 h-6" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-800">Keine Einrichtungen gefunden</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  {searchQuery
+                    ? `In den hinterlegten Einrichtungen gibt es keinen Treffer für „${searchQuery}“.`
+                    : 'Für die gewählten Filterkriterien gibt es aktuell keinen Eintrag.'}
+                </p>
+
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={handleExaFallbackSearch}
+                      disabled={exaLoading}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {exaLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Globe className="w-3.5 h-3.5" />
+                      )}
+                      <span>Im Berliner Web suchen (Exa)</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={onResetFilters}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Filter zurücksetzen
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Exa Fallback Ergebnisse */}
             {(exaLoading || exaResults.length > 0 || exaError) && (

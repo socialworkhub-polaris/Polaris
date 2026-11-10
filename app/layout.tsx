@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/AuthContext';
 import { TeamProvider } from '@/lib/TeamContext';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { BookmarkProvider } from '@/lib/useBookmarks';
 import PWARegister from '@/components/PWARegister';
 
 export const metadata: Metadata = {
@@ -34,10 +35,12 @@ export default function RootLayout({
       <body>
         <LanguageProvider>
           <AuthProvider>
-            <TeamProvider>
-              <PWARegister />
-              {children}
-            </TeamProvider>
+            <BookmarkProvider>
+              <TeamProvider>
+                <PWARegister />
+                {children}
+              </TeamProvider>
+            </BookmarkProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>

@@ -193,6 +193,7 @@ export default function Home() {
 
   const handleResetFilters = () => {
     setFilterState(INITIAL_FILTERS);
+    setShowOnlyBookmarks(false);
   };
 
   const handleSelectFacility = (facility: Facility) => {
@@ -252,6 +253,7 @@ export default function Home() {
               onResetFilters={handleResetFilters}
               searchQuery={filterState.searchQuery}
               totalCount={facilities.length}
+              showOnlyBookmarks={showOnlyBookmarks}
             />
           </div>
         </div>
