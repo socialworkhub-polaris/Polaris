@@ -91,14 +91,14 @@ export default function Home() {
       // 1. Full text search
       if (filterState.searchQuery.trim()) {
         const query = filterState.searchQuery.toLowerCase();
-        const matchesName = facility.name.toLowerCase().includes(query);
-        const matchesSubtitle = facility.subTitle.toLowerCase().includes(query);
-        const matchesDistrict = facility.district.toLowerCase().includes(query);
-        const matchesStreet = facility.address.street.toLowerCase().includes(query);
-        const matchesStation = facility.transit.station.toLowerCase().includes(query);
-        const matchesLegal = facility.legalBases.some((b) => b.toLowerCase().includes(query));
-        const matchesNotes = facility.internalWorkerNotes.toLowerCase().includes(query);
-        const matchesIntake = facility.intakeRules.summary.toLowerCase().includes(query);
+        const matchesName = (facility.name || '').toLowerCase().includes(query);
+        const matchesSubtitle = (facility.subTitle || '').toLowerCase().includes(query);
+        const matchesDistrict = (facility.district || '').toLowerCase().includes(query);
+        const matchesStreet = (facility.address?.street || '').toLowerCase().includes(query);
+        const matchesStation = (facility.transit?.station || '').toLowerCase().includes(query);
+        const matchesLegal = (facility.legalBases || []).some((b) => (b || '').toLowerCase().includes(query));
+        const matchesNotes = (facility.internalWorkerNotes || '').toLowerCase().includes(query);
+        const matchesIntake = (facility.intakeRules?.summary || '').toLowerCase().includes(query);
 
         if (
           !matchesName &&
@@ -131,7 +131,7 @@ export default function Home() {
 
       // 5. Target Age Groups (if any selected, must match at least one)
       if (filterState.ageGroups.length > 0) {
-        const hasMatchingAge = filterState.ageGroups.some((group) => facility.ageGroups.includes(group));
+        const hasMatchingAge = filterState.ageGroups.some((group) => (facility.ageGroups || []).includes(group));
         if (!hasMatchingAge) return false;
       }
 
@@ -141,12 +141,12 @@ export default function Home() {
       }
 
       // 7. Wheelchair Accessibility
-      if (filterState.wheelchairOnly && facility.accessibility.wheelchair !== 'voll') {
+      if (filterState.wheelchairOnly && facility.accessibility?.wheelchair !== 'voll') {
         return false;
       }
 
       // 8. Language
-      if (filterState.language !== 'all' && !facility.accessibility.languages.includes(filterState.language)) {
+      if (filterState.language !== 'all' && !(facility.accessibility?.languages || []).includes(filterState.language)) {
         return false;
       }
 

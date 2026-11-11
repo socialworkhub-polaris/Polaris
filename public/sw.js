@@ -1,6 +1,6 @@
 // Polaris Service Worker - Offline Streetwork Engine
-const CACHE_NAME = 'polaris-cache-v2';
-const DATA_CACHE_NAME = 'polaris-facilities-v2';
+const CACHE_NAME = 'polaris-cache-v3';
+const DATA_CACHE_NAME = 'polaris-facilities-v3';
 
 const PRECACHE_ASSETS = [
   '/',

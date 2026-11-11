@@ -214,12 +214,12 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
                   {/* Title */}
                   <h4 className="text-xs font-bold text-slate-900 leading-tight">{facility.name}</h4>
-                  <p className="text-[11px] text-slate-500 line-clamp-1">{facility.address.street}</p>
+                  <p className="text-[11px] text-slate-500 line-clamp-1">{facility.address?.street || 'Berlin'}</p>
 
                   {/* Transit info */}
                   <div className="flex items-center gap-1 text-[11px] text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-100">
                     <Train className="w-3 h-3 text-blue-600 shrink-0" />
-                    <span className="font-semibold">{facility.transit.station}</span>
+                    <span className="font-semibold">{facility.transit?.station || 'ÖPNV'}</span>
                   </div>
 
                   {/* Action buttons */}

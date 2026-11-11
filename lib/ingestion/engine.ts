@@ -98,7 +98,7 @@ export class IngestionEngine {
 
     // 2. Strict Curation Filter (Exclude Kitas, Culture clubs, and entries without direct contact)
     const curatedFacilities = allRawFetchedFacilities.filter((f) => {
-      const text = `${f.name} ${f.subTitle} ${f.features?.rawArt || ''}`.toLowerCase();
+      const text = `${f.name} ${f.subTitle} ${(f.features as any)?.rawArt || ''}`.toLowerCase();
 
       // Blacklist filter
       if (BLACKLIST_TERMS.some((term) => text.includes(term))) {

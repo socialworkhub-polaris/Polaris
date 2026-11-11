@@ -21,30 +21,51 @@ export function mapSupabaseRowToFacility(row: any): Facility {
   const features = row.features || {};
 
   return {
-    id: row.id,
-    name: row.name || '',
-    subTitle: row.sub_title || '',
+    id: String(row.id || ''),
+    name: String(row.name || ''),
+    subTitle: String(row.sub_title || ''),
     institutionType: row.institution_type || 'traeger',
     accessType: row.access_type || 'niedrigschwellig',
     primaryFocus: row.primary_focus || 'psychosozial_gesundheit',
     ageGroups: Array.isArray(row.age_groups) ? row.age_groups : [],
-    district: row.district || 'Berlin',
-    address: row.address || { street: '', zipCode: '', city: 'Berlin' },
-    coordinates: Array.isArray(row.coordinates) && row.coordinates.length === 2 
+    district: (row.district || 'Berlin') as any,
+    address: {
+      street: String(row.address?.street || ''),
+      zipCode: String(row.address?.zipCode || ''),
+      city: String(row.address?.city || 'Berlin'),
+    },
+    coordinates: Array.isArray(row.coordinates) && row.coordinates.length === 2 && typeof row.coordinates[0] === 'number' && typeof row.coordinates[1] === 'number' && !isNaN(row.coordinates[0]) && !isNaN(row.coordinates[1])
       ? [row.coordinates[0], row.coordinates[1]] 
       : [52.5200, 13.4050],
-    transit: row.transit || { station: '', lines: [], walkingTime: '' },
-    contact: row.contact || { phone: '', email: '', website: '' },
-    openingHours: row.opening_hours || { walkIn: '', appointment: '', phoneHours: '' },
-    intakeRules: row.intake_rules || { summary: '', procedure: '', regionalJurisdiction: '' },
+    transit: {
+      station: String(row.transit?.station || ''),
+      lines: Array.isArray(row.transit?.lines) ? row.transit.lines : [],
+      walkingTime: String(row.transit?.walkingTime || ''),
+    },
+    contact: {
+      phone: String(row.contact?.phone || ''),
+      email: String(row.contact?.email || ''),
+      website: String(row.contact?.website || ''),
+      emergencyPhone: row.contact?.emergencyPhone ? String(row.contact.emergencyPhone) : undefined,
+    },
+    openingHours: {
+      walkIn: String(row.opening_hours?.walkIn || ''),
+      appointment: String(row.opening_hours?.appointment || ''),
+      phoneHours: String(row.opening_hours?.phoneHours || ''),
+    },
+    intakeRules: {
+      summary: String(row.intake_rules?.summary || ''),
+      procedure: String(row.intake_rules?.procedure || ''),
+      regionalJurisdiction: String(row.intake_rules?.regionalJurisdiction || ''),
+    },
     requiredDocuments: reqDocs,
-    legalBases: [],
+    legalBases: Array.isArray(row.legal_bases) ? row.legal_bases : [],
     accessibility: {
       wheelchair: features.wheelchairAccessible ? 'voll' : 'nein',
-      languages: Array.isArray(features.languages) ? features.languages : ['Deutsch'],
+      languages: Array.isArray(features.languages) && features.languages.length > 0 ? features.languages : ['Deutsch'],
       elevator: Boolean(features.wheelchairAccessible),
     },
-    internalWorkerNotes: '',
+    internalWorkerNotes: String(row.internal_worker_notes || ''),
     targetGroups: Array.isArray(row.target_groups) ? row.target_groups : [],
     features: features,
   };

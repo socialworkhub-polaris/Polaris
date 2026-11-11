@@ -48,13 +48,13 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({
     e.stopPropagation();
     const note = `[Polaris Vermerk - Weiterleitung/Triage]
 Einrichtung: ${facility.name} (${isAmt ? 'Behörde/Amt' : 'Freier Träger'})
-Bezirk: ${facility.district} | Adresse: ${facility.address.street}, ${facility.address.zipCode} Berlin
-ÖPNV: ${facility.transit.station} (${facility.transit.walkingTime})
-Kontakt: Tel: ${facility.contact.phone} | Mail: ${facility.contact.email}
-Rechtsgrundlage / Zuordnung: ${facility.legalBases.join(', ')}
-Offene Sprechzeit: ${facility.openingHours.walkIn}
-Mitzubringende Unterlagen: ${facility.requiredDocuments.join('; ')}
-Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
+Bezirk: ${facility.district} | Adresse: ${facility.address?.street || 'Berlin'}, ${facility.address?.zipCode || ''} Berlin
+ÖPNV: ${facility.transit?.station || 'Berlin'} (${facility.transit?.walkingTime || ''})
+Kontakt: Tel: ${facility.contact?.phone || '-'} | Mail: ${facility.contact?.email || '-'}
+Rechtsgrundlage / Zuordnung: ${(facility.legalBases || []).join(', ')}
+Offene Sprechzeit: ${facility.openingHours?.walkIn || '-'}
+Mitzubringende Unterlagen: ${(facility.requiredDocuments || []).join('; ')}
+Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
 
     navigator.clipboard.writeText(note);
     setCopied(true);
@@ -191,15 +191,22 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
       {/* Fußzeile: Kontakt & Aktionen */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 text-xs ml-1.5">
         {/* Telefon-Direktlink */}
-        <a
-          href={`tel:${facility.contact.phone.replace(/\s+/g, '')}`}
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-600 font-medium transition-colors"
-          title="Direkt anrufen"
-        >
-          <Phone className="w-3.5 h-3.5 text-slate-400" />
-          <span>{facility.contact.phone}</span>
-        </a>
+        {facility.contact?.phone ? (
+          <a
+            href={`tel:${facility.contact.phone.replace(/\s+/g, '')}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-600 font-medium transition-colors"
+            title="Direkt anrufen"
+          >
+            <Phone className="w-3.5 h-3.5 text-slate-400" />
+            <span>{facility.contact.phone}</span>
+          </a>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 text-slate-400">
+            <Phone className="w-3.5 h-3.5 text-slate-300" />
+            <span>Kein Telefon</span>
+          </div>
+        )}
 
         {/* Aktionsbuttons */}
         <div className="flex items-center gap-1.5 ml-auto">
