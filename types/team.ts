@@ -51,3 +51,22 @@ export interface TeamAnnouncement {
   createdAt: string;
   updatedAt?: string;
 }
+
+export type CalendarEventCategory = 'shift' | 'handover' | 'outreach' | 'event' | 'deadline';
+
+export interface TeamCalendarEvent {
+  id: string;
+  organizationId: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  category: CalendarEventCategory;
+  facilityId?: string;
+  facilityName?: string;
+  isCrossTeam?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}

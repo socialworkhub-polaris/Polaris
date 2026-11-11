@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
-import { Organization, OrganizationMember, FacilityTeamNote, NoteCategory, TeamAnnouncement, AnnouncementPriority } from '@/types/team';
+import { Organization, OrganizationMember, FacilityTeamNote, NoteCategory, TeamAnnouncement, AnnouncementPriority, TeamCalendarEvent, CalendarEventCategory } from '@/types/team';
 
 interface TeamContextType {
   organizations: Organization[];
@@ -29,6 +29,19 @@ interface TeamContextType {
   togglePinAnnouncement: (id: string, currentPin: boolean) => Promise<void>;
   allTeamFacilityNotes: FacilityTeamNote[];
   loadAllTeamFacilityNotes: () => Promise<void>;
+  calendarEvents: TeamCalendarEvent[];
+  loadCalendarEvents: () => Promise<void>;
+  createCalendarEvent: (event: {
+    title: string;
+    description?: string;
+    startTime: string;
+    endTime: string;
+    category: CalendarEventCategory;
+    facilityId?: string;
+    facilityName?: string;
+    isCrossTeam?: boolean;
+  }) => Promise<TeamCalendarEvent>;
+  deleteCalendarEvent: (id: string) => Promise<void>;
 }
 
 const TeamContext = createContext<TeamContextType>({
@@ -55,6 +68,10 @@ const TeamContext = createContext<TeamContextType>({
   togglePinAnnouncement: async () => {},
   allTeamFacilityNotes: [],
   loadAllTeamFacilityNotes: async () => {},
+  calendarEvents: [],
+  loadCalendarEvents: async () => {},
+  createCalendarEvent: async () => { throw new Error('Not initialized'); },
+  deleteCalendarEvent: async () => {},
 });
 
 export const useTeam = () => useContext(TeamContext);
@@ -67,6 +84,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notesCountByFacility, setNotesCountByFacility] = useState<Record<string, number>>({});
   const [announcements, setAnnouncements] = useState<TeamAnnouncement[]>([]);
   const [allTeamFacilityNotes, setAllTeamFacilityNotes] = useState<FacilityTeamNote[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<TeamCalendarEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Set current organization and persist to localStorage
@@ -657,6 +675,130 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     loadAllTeamFacilityNotes();
   }, [loadAllTeamFacilityNotes]);
+  // 17. Load calendar events (internal shifts & cross-team events)
+  const loadCalendarEvents = useCallback(async () => {
+    if (!currentOrganization) {
+      setCalendarEvents([]);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('team_calendar_events')
+        .select('*')
+        .or(`organization_id.eq.${currentOrganization.id},is_cross_team.eq.true`)
+        .order('start_time', { ascending: true });
+
+      if (!error && data) {
+        setCalendarEvents(
+          data.map((row: any) => ({
+            id: row.id,
+            organizationId: row.organization_id,
+            authorId: row.author_id,
+            authorName: row.author_name,
+            title: row.title,
+            description: row.description || '',
+            startTime: row.start_time,
+            endTime: row.end_time,
+            category: row.category as CalendarEventCategory,
+            facilityId: row.facility_id || undefined,
+            facilityName: row.facility_name || undefined,
+            isCrossTeam: !!row.is_cross_team,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Error loading calendar events:', err);
+    }
+  }, [currentOrganization]);
+
+  useEffect(() => {
+    loadCalendarEvents();
+  }, [loadCalendarEvents]);
+
+  // 18. Create new calendar event
+  const createCalendarEvent = async (eventData: {
+    title: string;
+    description?: string;
+    startTime: string;
+    endTime: string;
+    category: CalendarEventCategory;
+    facilityId?: string;
+    facilityName?: string;
+    isCrossTeam?: boolean;
+  }): Promise<TeamCalendarEvent> => {
+    if (!user || !currentOrganization) {
+      throw new Error('Kein aktives Team ausgewählt.');
+    }
+
+    const trimmedTitle = eventData.title.trim();
+    if (!trimmedTitle) {
+      throw new Error('Titel darf nicht leer sein.');
+    }
+
+    const authorName = (
+      user.user_metadata?.full_name ||
+      user.email?.split('@')[0] ||
+      'Kolleg*in'
+    ).trim();
+
+    const { data, error } = await supabase
+      .from('team_calendar_events')
+      .insert({
+        organization_id: currentOrganization.id,
+        author_id: user.id,
+        author_name: authorName,
+        title: trimmedTitle,
+        description: eventData.description?.trim() || null,
+        start_time: eventData.startTime,
+        end_time: eventData.endTime,
+        category: eventData.category,
+        facility_id: eventData.facilityId || null,
+        facility_name: eventData.facilityName || null,
+        is_cross_team: !!eventData.isCrossTeam,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    const created: TeamCalendarEvent = {
+      id: data.id,
+      organizationId: data.organization_id,
+      authorId: data.author_id,
+      authorName: data.author_name,
+      title: data.title,
+      description: data.description || '',
+      startTime: data.start_time,
+      endTime: data.end_time,
+      category: data.category as CalendarEventCategory,
+      facilityId: data.facility_id || undefined,
+      facilityName: data.facility_name || undefined,
+      isCrossTeam: !!data.is_cross_team,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+
+    setCalendarEvents((prev) => [...prev, created].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
+    return created;
+  };
+
+  // 19. Delete calendar event
+  const deleteCalendarEvent = async (id: string): Promise<void> => {
+    if (!currentOrganization) return;
+
+    const { error } = await supabase
+      .from('team_calendar_events')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+
+    setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
 
   return (
     <TeamContext.Provider
@@ -684,6 +826,10 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         togglePinAnnouncement,
         allTeamFacilityNotes,
         loadAllTeamFacilityNotes,
+        calendarEvents,
+        loadCalendarEvents,
+        createCalendarEvent,
+        deleteCalendarEvent,
       }}
     >
       {children}
