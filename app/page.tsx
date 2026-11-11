@@ -335,19 +335,21 @@ export default function Home() {
       />
 
       {/* Team-Zentrale / Schwarzes Brett Modal */}
-      <TeamHubModal
-        isOpen={isTeamHubOpen}
-        onClose={() => setIsTeamHubOpen(false)}
-        facilities={facilities}
-        onSelectFacilityAndOpen={(facility) => {
-          setIsTeamHubOpen(false);
-          handleOpenDetails(facility);
-        }}
-        onOpenTeamSettings={() => {
-          setIsTeamHubOpen(false);
-          setIsDeepLinkJoinOpen(true);
-        }}
-      />
+      {isTeamHubOpen && (
+        <TeamHubModal
+          isOpen={isTeamHubOpen}
+          onClose={() => setIsTeamHubOpen(false)}
+          facilities={facilities || []}
+          onSelectFacilityAndOpen={(facility) => {
+            setIsTeamHubOpen(false);
+            handleOpenDetails(facility);
+          }}
+          onOpenTeamSettings={() => {
+            setIsTeamHubOpen(false);
+            setIsDeepLinkJoinOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -107,22 +107,27 @@ const CALENDAR_CATEGORY_CONFIG: Record<
   },
 };
 
+const MONTH_NAMES = [
+  'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+  'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+];
+
 export const TeamHubModal: React.FC<TeamHubModalProps> = ({
   isOpen,
   onClose,
-  facilities,
+  facilities = [],
   onSelectFacilityAndOpen,
   onOpenTeamSettings,
 }) => {
   const { user } = useAuth();
   const {
     currentOrganization,
-    announcements,
+    announcements = [],
     createAnnouncement,
     deleteAnnouncement,
     togglePinAnnouncement,
-    allTeamFacilityNotes,
-    calendarEvents,
+    allTeamFacilityNotes = [],
+    calendarEvents = [],
     createCalendarEvent,
     deleteCalendarEvent,
   } = useTeam();
@@ -156,13 +161,88 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
   const [currentMonthDate, setCurrentMonthDate] = useState(() => new Date());
   const [selectedDayFilter, setSelectedDayFilter] = useState<string | null>(null);
 
-  // Facility fast lookup
+  // ALL HOOKS CALLED UNCONDITIONALLY AT TOP LEVEL (React Rules of Hooks)
+  // 1. Facility fast lookup map
   const facilityMap = useMemo(() => {
     const map = new Map<string, Facility>();
-    facilities.forEach((f) => map.set(f.id, f));
+    (facilities || []).forEach((f) => {
+      if (f && f.id) map.set(f.id, f);
+    });
     return map;
   }, [facilities]);
 
+  // 2. Filtered Calendar Events
+  const filteredEvents = useMemo(() => {
+    return (calendarEvents || []).filter((ev) => {
+      if (!ev) return false;
+      if (selectedCalendarCategory !== 'all' && ev.category !== selectedCalendarCategory) {
+        return false;
+      }
+      if (selectedDayFilter && ev.startTime) {
+        try {
+          const evDay = new Date(ev.startTime).toISOString().slice(0, 10);
+          if (evDay !== selectedDayFilter) return false;
+        } catch {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [calendarEvents, selectedCalendarCategory, selectedDayFilter]);
+
+  // 3. Calendar Month Days Grid
+  const calendarMonthGrid = useMemo(() => {
+    const year = currentMonthDate.getFullYear();
+    const month = currentMonthDate.getMonth();
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+
+    let startDayOfWeek = firstDayOfMonth.getDay() - 1;
+    if (startDayOfWeek === -1) startDayOfWeek = 6;
+
+    const days: { date: Date; dateStr: string; isCurrentMonth: boolean; hasEvents: TeamCalendarEvent[] }[] = [];
+    const safeCalendarEvents = calendarEvents || [];
+
+    // Prev month padding
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      const d = new Date(year, month, -i);
+      const dStr = d.toISOString().slice(0, 10);
+      days.push({
+        date: d,
+        dateStr: dStr,
+        isCurrentMonth: false,
+        hasEvents: safeCalendarEvents.filter((e) => e?.startTime && e.startTime.slice(0, 10) === dStr),
+      });
+    }
+
+    // Current month days
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+      const d = new Date(year, month, day);
+      const dStr = d.toISOString().slice(0, 10);
+      days.push({
+        date: d,
+        dateStr: dStr,
+        isCurrentMonth: true,
+        hasEvents: safeCalendarEvents.filter((e) => e?.startTime && e.startTime.slice(0, 10) === dStr),
+      });
+    }
+
+    // Next month padding to fill rows of 7
+    while (days.length % 7 !== 0) {
+      const d = new Date(year, month + 1, days.length - (startDayOfWeek + lastDayOfMonth.getDate()) + 1);
+      const dStr = d.toISOString().slice(0, 10);
+      days.push({
+        date: d,
+        dateStr: dStr,
+        isCurrentMonth: false,
+        hasEvents: safeCalendarEvents.filter((e) => e?.startTime && e.startTime.slice(0, 10) === dStr),
+      });
+    }
+
+    return days;
+  }, [currentMonthDate, calendarEvents]);
+
+  // Guard: if closed or no active team, render nothing (all hooks have already run!)
   if (!isOpen || !currentOrganization) return null;
 
   const isAdmin = currentOrganization.role === 'admin';
@@ -304,77 +384,6 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
     }
   };
 
-  // Filtered Calendar Events
-  const filteredEvents = useMemo(() => {
-    return calendarEvents.filter((ev) => {
-      if (selectedCalendarCategory !== 'all' && ev.category !== selectedCalendarCategory) {
-        return false;
-      }
-      if (selectedDayFilter) {
-        const evDay = new Date(ev.startTime).toISOString().slice(0, 10);
-        if (evDay !== selectedDayFilter) return false;
-      }
-      return true;
-    });
-  }, [calendarEvents, selectedCalendarCategory, selectedDayFilter]);
-
-  // Calendar Month Days Calculation
-  const calendarMonthGrid = useMemo(() => {
-    const year = currentMonthDate.getFullYear();
-    const month = currentMonthDate.getMonth();
-    const firstDayOfMonth = new Date(year, month, 1);
-    const lastDayOfMonth = new Date(year, month + 1, 0);
-
-    // Monday is 0 in de-DE
-    let startDayOfWeek = firstDayOfMonth.getDay() - 1;
-    if (startDayOfWeek === -1) startDayOfWeek = 6;
-
-    const days: { date: Date; dateStr: string; isCurrentMonth: boolean; hasEvents: TeamCalendarEvent[] }[] = [];
-
-    // Prev month padding
-    for (let i = startDayOfWeek - 1; i >= 0; i--) {
-      const d = new Date(year, month, -i);
-      const dStr = d.toISOString().slice(0, 10);
-      days.push({
-        date: d,
-        dateStr: dStr,
-        isCurrentMonth: false,
-        hasEvents: calendarEvents.filter((e) => e.startTime.slice(0, 10) === dStr),
-      });
-    }
-
-    // Current month days
-    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
-      const d = new Date(year, month, day);
-      const dStr = d.toISOString().slice(0, 10);
-      days.push({
-        date: d,
-        dateStr: dStr,
-        isCurrentMonth: true,
-        hasEvents: calendarEvents.filter((e) => e.startTime.slice(0, 10) === dStr),
-      });
-    }
-
-    // Next month padding to fill rows
-    while (days.length % 7 !== 0) {
-      const d = new Date(year, month + 1, days.length - (startDayOfWeek + lastDayOfMonth.getDate()) + 1);
-      const dStr = d.toISOString().slice(0, 10);
-      days.push({
-        date: d,
-        dateStr: dStr,
-        isCurrentMonth: false,
-        hasEvents: calendarEvents.filter((e) => e.startTime.slice(0, 10) === dStr),
-      });
-    }
-
-    return days;
-  }, [currentMonthDate, calendarEvents]);
-
-  const monthNames = [
-    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-  ];
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
       <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
@@ -403,7 +412,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
             <button
               type="button"
               onClick={onOpenTeamSettings}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition cursor-pointer"
               title="Team-Mitglieder & Einstellungen"
             >
               Workspace-Settings
@@ -429,7 +438,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
             }`}
           >
             <Pin className="w-3.5 h-3.5" />
-            <span>Pinnwand & Übergabe ({announcements.length})</span>
+            <span>Pinnwand & Übergabe ({(announcements || []).length})</span>
           </button>
 
           <button
@@ -442,7 +451,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
-            <span>Kalender & Schichten ({calendarEvents.length})</span>
+            <span>Kalender & Schichten ({(calendarEvents || []).length})</span>
           </button>
 
           <button
@@ -455,7 +464,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Einrichtungs-Ticker Berlin ({allTeamFacilityNotes.length})</span>
+            <span>Einrichtungs-Ticker Berlin ({(allTeamFacilityNotes || []).length})</span>
           </button>
         </div>
 
@@ -496,7 +505,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsPosting(false)}
-                      className="text-xs text-slate-400 hover:text-slate-600"
+                      className="text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
                     >
                       Abbrechen
                     </button>
@@ -580,7 +589,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
               )}
 
               {/* Announcements List */}
-              {announcements.length === 0 ? (
+              {(announcements || []).length === 0 ? (
                 <div className="p-8 text-center bg-white border border-slate-200 rounded-xl shadow-xs space-y-2">
                   <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                     <ClipboardList className="w-5 h-5" />
@@ -592,7 +601,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {announcements.map((item) => {
+                  {(announcements || []).map((item) => {
                     const conf = PRIORITY_CONFIG[item.priority] || PRIORITY_CONFIG.info;
                     const Icon = conf.icon;
                     const canManage = isAdmin || (user && user.id === item.authorId);
@@ -627,7 +636,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                                 type="button"
                                 onClick={() => togglePinAnnouncement(item.id, item.isPinned)}
                                 title={item.isPinned ? 'Anheften aufheben' : 'Oben anheften'}
-                                className={`p-1.5 rounded-lg border transition ${
+                                className={`p-1.5 rounded-lg border transition cursor-pointer ${
                                   item.isPinned
                                     ? 'bg-amber-100 text-amber-700 border-amber-300'
                                     : 'bg-white text-slate-400 hover:text-slate-700 border-slate-200'
@@ -639,7 +648,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                                 type="button"
                                 onClick={() => deleteAnnouncement(item.id)}
                                 title="Aushang löschen"
-                                className="p-1.5 rounded-lg border bg-white text-slate-400 hover:text-rose-600 border-slate-200 transition"
+                                className="p-1.5 rounded-lg border bg-white text-slate-400 hover:text-rose-600 border-slate-200 transition cursor-pointer"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -705,7 +714,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setSelectedDayFilter(null)}
-                      className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg font-medium hover:bg-blue-100 transition"
+                      className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg font-medium hover:bg-blue-100 transition cursor-pointer"
                     >
                       Tag-Filter zurücksetzen ({selectedDayFilter}) ✕
                     </button>
@@ -822,7 +831,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                         className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white"
                       >
                         <option value="">Keine Einrichtung verknüpfen</option>
-                        {facilities.slice(0, 80).map((f) => (
+                        {(facilities || []).slice(0, 80).map((f) => (
                           <option key={f.id} value={f.id}>
                             {f.name} ({f.district})
                           </option>
@@ -878,10 +887,10 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  Alle ({calendarEvents.length})
+                  Alle ({(calendarEvents || []).length})
                 </button>
                 {Object.entries(CALENDAR_CATEGORY_CONFIG).map(([catKey, conf]) => {
-                  const count = calendarEvents.filter((e) => e.category === catKey).length;
+                  const count = (calendarEvents || []).filter((e) => e?.category === catKey).length;
                   const isSelected = selectedCalendarCategory === catKey;
                   return (
                     <button
@@ -907,7 +916,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                   {/* Month header & navigation */}
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-bold text-slate-900">
-                      {monthNames[currentMonthDate.getMonth()]} {currentMonthDate.getFullYear()}
+                      {MONTH_NAMES[currentMonthDate.getMonth()]} {currentMonthDate.getFullYear()}
                     </h4>
                     <div className="flex items-center gap-1">
                       <button
@@ -1154,11 +1163,11 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                   Chronologischer Feed aller vertraulichen Notizen, die dein Team zu Berliner Einrichtungen verfasst hat.
                 </span>
                 <span className="font-bold text-slate-900 shrink-0">
-                  {allTeamFacilityNotes.length} Notizen gesamt
+                  {(allTeamFacilityNotes || []).length} Notizen gesamt
                 </span>
               </div>
 
-              {allTeamFacilityNotes.length === 0 ? (
+              {(allTeamFacilityNotes || []).length === 0 ? (
                 <div className="p-8 text-center bg-white border border-slate-200 rounded-xl shadow-xs space-y-2">
                   <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                     <Building2 className="w-5 h-5" />
@@ -1170,7 +1179,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {allTeamFacilityNotes.map((note) => {
+                  {(allTeamFacilityNotes || []).map((note) => {
                     const cat = NOTE_CATEGORY_LABELS[note.category] || NOTE_CATEGORY_LABELS.general;
                     const matchedFac = facilityMap.get(note.facilityId);
 
@@ -1196,7 +1205,7 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                               <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                                 <MapPin className="w-3 h-3" />
                                 <span>
-                                  {matchedFac.address.street}, {matchedFac.district}
+                                  {matchedFac.address?.street || 'Berlin'}, {matchedFac.district}
                                 </span>
                               </p>
                             )}

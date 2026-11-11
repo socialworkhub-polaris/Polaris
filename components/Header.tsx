@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
   const { currentOrganization, announcements } = useTeam();
-  const hasUrgentOrPinned = announcements.some((a) => a.isPinned || a.priority === 'urgent');
+  const hasUrgentOrPinned = (announcements || []).some((a) => a?.isPinned || a?.priority === 'urgent');
   const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
