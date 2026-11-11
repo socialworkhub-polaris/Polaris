@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Facility } from '@/types/facility';
+import { resolveFallbackWebsite } from '@/lib/facilityLinks';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
@@ -45,7 +46,16 @@ export function mapSupabaseRowToFacility(row: any): Facility {
     contact: {
       phone: String(row.contact?.phone || ''),
       email: String(row.contact?.email || ''),
-      website: String(row.contact?.website || ''),
+      website: (() => {
+        let site = String(row.contact?.website || '').replace(/[\r\n\s]+/g, '').trim();
+        if (!site) {
+          return resolveFallbackWebsite({ id: row.id, name: row.name, district: row.district });
+        }
+        if (!/^https?:\/\//i.test(site)) {
+          return `https://${site}`;
+        }
+        return site;
+      })(),
       emergencyPhone: row.contact?.emergencyPhone ? String(row.contact.emergencyPhone) : undefined,
     },
     openingHours: {
