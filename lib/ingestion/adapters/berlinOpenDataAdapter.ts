@@ -70,7 +70,10 @@ export class BerlinOpenDataAdapter implements IngestionAdapter {
           // Contact parsing
           let email = (data.e_mail || '').replace(/^mailto:/i, '').trim();
           let phone = (data.telefon || '').trim();
-          let website = (data.homepage || '').trim();
+          let rawWebsite = (data.homepage || '').replace(/[\r\n\s]+/g, '').trim();
+          let website = rawWebsite
+            ? (!/^https?:\/\//i.test(rawWebsite) ? `https://${rawWebsite}` : rawWebsite)
+            : 'https://www.berlin.de';
 
           // Opening hours compilation
           const hoursDays = [

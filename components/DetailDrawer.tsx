@@ -36,6 +36,16 @@ interface DetailDrawerProps {
   onOpenPrint: (facility: Facility) => void;
 }
 
+function sanitizeExternalUrl(rawUrl?: string): string | null {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  const cleaned = rawUrl.replace(/[\r\n\s]+/g, '').trim();
+  if (!cleaned || cleaned === 'https://' || cleaned === 'http://') return null;
+  if (!/^https?:\/\//i.test(cleaned)) {
+    return `https://${cleaned}`;
+  }
+  return cleaned;
+}
+
 export const DetailDrawer: React.FC<DetailDrawerProps> = ({
   facility,
   isOpen,
@@ -278,18 +288,20 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
                       {facility.contact.email}
                     </a>
                   </div>
-                  <div>
-                    <span className="text-slate-400 block font-medium">Webauftritt:</span>
-                    <a
-                      href={facility.contact.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline inline-flex items-center gap-1"
-                    >
-                      <span>Offizielle Webseite öffnen</span>
-                      <Globe className="w-3 h-3" />
-                    </a>
-                  </div>
+                  {sanitizeExternalUrl(facility.contact?.website) && (
+                    <div>
+                      <span className="text-slate-400 block font-medium">Webauftritt:</span>
+                      <a
+                        href={sanitizeExternalUrl(facility.contact?.website)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>Offizielle Webseite öffnen</span>
+                        <Globe className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
