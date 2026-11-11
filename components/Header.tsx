@@ -90,29 +90,13 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 hidden xl:block">
-                  Schnittstelle zwischen Ämtern & freien Trägern
+                  {t.tagline}
                 </p>
               </div>
             </div>
 
             {/* Buttons gruppiert auf der linken Seite */}
             <div className="flex items-center gap-2 sm:gap-2.5 text-xs flex-wrap">
-              {/* Schwarzes Brett & Dienstübergabe Button */}
-              {currentOrganization && onOpenTeamHub && (
-                <button
-                  type="button"
-                  onClick={onOpenTeamHub}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer shrink-0"
-                  title={`Schwarzes Brett & Dienstübergabe (${currentOrganization.name})`}
-                >
-                  <ClipboardList className="w-3.5 h-3.5 text-indigo-200" />
-                  <span>Schwarzes Brett</span>
-                  {hasUrgentOrPinned && (
-                    <span className="w-2 h-2 rounded-full bg-rose-400 ring-2 ring-indigo-900 animate-pulse" />
-                  )}
-                </button>
-              )}
-
               {/* Smart Triage Button */}
               {onOpenTriage && (
                 <button
@@ -161,9 +145,25 @@ export const Header: React.FC<HeaderProps> = ({
 
           </div>
 
-          {/* Rechter Bereich: Auth (Anmelden) & Language Switcher */}
+          {/* Rechter Bereich: Schwarzes Brett, Team & Profil, Language Switcher */}
           <div className="flex items-center gap-2 sm:gap-2.5 text-xs shrink-0 ml-auto">
-            {/* Benutzer-Profil / Anmelden */}
+            {/* Schwarzes Brett & Dienstübergabe Button (gruppiert bei Team & Profil) */}
+            {currentOrganization && onOpenTeamHub && (
+              <button
+                type="button"
+                onClick={onOpenTeamHub}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer shrink-0"
+                title={`Schwarzes Brett & Dienstübergabe (${currentOrganization.name})`}
+              >
+                <ClipboardList className="w-3.5 h-3.5 text-indigo-200" />
+                <span>Schwarzes Brett</span>
+                {hasUrgentOrPinned && (
+                  <span className="w-2 h-2 rounded-full bg-rose-400 ring-2 ring-indigo-900 animate-pulse" />
+                )}
+              </button>
+            )}
+
+            {/* Benutzer-Profil / Team Workspace / Anmelden */}
             <UserMenu />
 
             {/* Language Switcher (DE | EN) - Ganz rechts */}

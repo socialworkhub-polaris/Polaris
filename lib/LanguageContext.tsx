@@ -7,6 +7,7 @@ export type Language = 'de' | 'en';
 export const translations = {
   de: {
     // Header
+    tagline: 'Praxis-Kompass für die Soziale Arbeit',
     smartTriage: 'Smart Triage',
     getLicense: 'Lizenz erwerben',
     privacy: 'Datenschutz & Impressum',
@@ -50,6 +51,7 @@ export const translations = {
   },
   en: {
     // Header
+    tagline: 'Practice Compass for Social Work',
     smartTriage: 'Smart Triage',
     getLicense: 'Get Team License',
     privacy: 'Privacy & Legal Notice',
