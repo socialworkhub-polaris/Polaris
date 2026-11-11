@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Facility } from '@/types/facility';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase URL oder Anon Key fehlen in .env.local!');
