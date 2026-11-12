@@ -23,7 +23,7 @@ const DynamicLeafletMap = dynamic(() => import('./LeafletMap'), {
       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       <div className="text-center">
         <p className="text-sm font-semibold text-slate-700">Berliner Karte wird geladen...</p>
-        <p className="text-xs text-slate-400">Lokale Vektorkarte (DSGVO-konform / PMTiles)</p>
+        <p className="text-xs text-slate-400">Vektorkarte (DSGVO-konform / Cloudflare R2)</p>
       </div>
     </div>
   ),

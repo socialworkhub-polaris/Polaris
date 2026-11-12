@@ -17,6 +17,7 @@ node_modules
 .DS_Store
 *.pem
 scripts/bin/
+public/tiles/*.pmtiles
 
 # Debug
 npm-debug.log*

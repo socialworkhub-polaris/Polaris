@@ -78,8 +78,10 @@ const GOOGLE_MAPS_THEME = {
   },
 };
 
-// Protomaps Vector Layer Component (100% Self-Hosted & GDPR / § 35 SGB I Compliant)
-const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = '/tiles/berlin.pmtiles' }) => {
+const DEFAULT_PMTILES_URL = 'https://pub-f3f0eb63a5f147d589065f16773925a3.r2.dev/berlin.pmtiles';
+
+// Protomaps Vector Layer Component (100% Self-Hosted & GDPR / § 35 SGB I Compliant via Cloudflare R2)
+const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = DEFAULT_PMTILES_URL }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -231,8 +233,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   onSelectDistrict,
 }) => {
   const berlinCenter: [number, number] = [52.518, 13.405];
-  // 100% GDPR-compliant self-hosted PMTiles source (zero IP leakage to third parties)
-  const pmtilesUrl = process.env.NEXT_PUBLIC_PMTILES_URL || '/tiles/berlin.pmtiles';
+  // 100% GDPR-compliant self-hosted PMTiles source on Cloudflare R2
+  const pmtilesUrl = process.env.NEXT_PUBLIC_PMTILES_URL || DEFAULT_PMTILES_URL;
 
   const [showDistricts, setShowDistricts] = useState<boolean>(true);
 
