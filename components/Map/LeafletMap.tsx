@@ -78,7 +78,7 @@ const GOOGLE_MAPS_THEME = {
   },
 };
 
-const DEFAULT_PMTILES_URL = 'https://pub-f3f0eb63a5f147d589065f16773925a3.r2.dev/berlin.pmtiles';
+const DEFAULT_PMTILES_URL = 'https://pub-f3f0eb63a5f147d589065f16773925a3.r2.dev/germany.pmtiles';
 
 // Protomaps Vector Layer Component (100% Self-Hosted & GDPR / § 35 SGB I Compliant via Cloudflare R2)
 const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = DEFAULT_PMTILES_URL }) => {

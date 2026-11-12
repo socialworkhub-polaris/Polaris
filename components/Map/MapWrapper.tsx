@@ -22,8 +22,8 @@ const DynamicLeafletMap = dynamic(() => import('./LeafletMap'), {
     <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center bg-slate-100 text-slate-500 gap-3">
       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       <div className="text-center">
-        <p className="text-sm font-semibold text-slate-700">Berliner Karte wird geladen...</p>
-        <p className="text-xs text-slate-400">Vektorkarte (DSGVO-konform / Cloudflare R2)</p>
+        <p className="text-sm font-semibold text-slate-700">Karte wird geladen...</p>
+        <p className="text-xs text-slate-400">Deutschlandweite Vektorkarte (DSGVO-konform / Cloudflare R2)</p>
       </div>
     </div>
   ),
