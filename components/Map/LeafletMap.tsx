@@ -93,6 +93,7 @@ const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = '/tiles/berl
         lang: 'de',
         backgroundColor: '#a5d7f8',
         maxDataZoom: 15,
+        maxZoom: 18,
         attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (Lokal & DSGVO-konform)',
       });
 
@@ -293,6 +294,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       <MapContainer
         center={berlinCenter}
         zoom={11}
+        minZoom={9}
+        maxZoom={18}
         scrollWheelZoom={true}
         className="w-full h-full z-10"
         style={{ minHeight: '100%', background: '#f4f3f0' }}
@@ -318,6 +321,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           chunkedLoading
           iconCreateFunction={createCustomClusterIcon}
           maxClusterRadius={45}
+          disableClusteringAtZoom={16}
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
         >
