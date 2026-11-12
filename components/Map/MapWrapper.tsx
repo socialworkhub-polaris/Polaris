@@ -2,7 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { Facility } from '@/types/facility';
+import { Facility, BerlinDistrict } from '@/types/facility';
 import { MapPin, Loader2 } from 'lucide-react';
 
 interface MapWrapperProps {
@@ -11,6 +11,8 @@ interface MapWrapperProps {
   onSelectFacility: (facility: Facility) => void;
   onOpenDetails: (facility: Facility) => void;
   onOpenPrint: (facility: Facility) => void;
+  selectedDistrict?: BerlinDistrict | 'all';
+  onSelectDistrict?: (district: BerlinDistrict) => void;
 }
 
 // Dynamically import LeafletMap with SSR disabled to prevent `window is not defined`
@@ -21,7 +23,7 @@ const DynamicLeafletMap = dynamic(() => import('./LeafletMap'), {
       <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       <div className="text-center">
         <p className="text-sm font-semibold text-slate-700">Berliner Karte wird geladen...</p>
-        <p className="text-xs text-slate-400">OpenStreetMap / CartoDB Voyager</p>
+        <p className="text-xs text-slate-400">Lokale Vektorkarte (DSGVO-konform / PMTiles)</p>
       </div>
     </div>
   ),

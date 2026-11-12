@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useMemo, useState } from 'react';
+import { MapContainer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import * as protomapsL from 'protomaps-leaflet';
 import { LIGHT } from '@protomaps/basemaps';
-import { Facility } from '@/types/facility';
-import { Building2, HeartHandshake, MapPin, Printer, ChevronRight, Train } from 'lucide-react';
+import { Facility, BerlinDistrict } from '@/types/facility';
+import { Building2, HeartHandshake, MapPin, Printer, ChevronRight, Train, Layers } from 'lucide-react';
+import berlinBezirkeGeoJson from '@/data/berlin_bezirke.json';
 
 interface LeafletMapProps {
   facilities: Facility[];
@@ -15,6 +17,8 @@ interface LeafletMapProps {
   onSelectFacility: (facility: Facility) => void;
   onOpenDetails: (facility: Facility) => void;
   onOpenPrint: (facility: Facility) => void;
+  selectedDistrict?: BerlinDistrict | 'all';
+  onSelectDistrict?: (district: BerlinDistrict) => void;
 }
 
 // Google Maps-inspired warm & vibrant cartography styling
@@ -74,20 +78,22 @@ const GOOGLE_MAPS_THEME = {
   },
 };
 
-// Protomaps Vector Layer Component
-const ProtomapsLayer: React.FC<{ apiKey: string }> = ({ apiKey }) => {
+// Protomaps Vector Layer Component (100% Self-Hosted & GDPR / § 35 SGB I Compliant)
+const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = '/tiles/berlin.pmtiles' }) => {
   const map = useMap();
 
   useEffect(() => {
-    if (!map || !apiKey) return;
+    if (!map || !tileUrl) return;
 
     try {
       const layer = protomapsL.leafletLayer({
-        url: `https://api.protomaps.com/tiles/v3/{z}/{x}/{y}.mvt?key=${apiKey}`,
+        url: tileUrl,
         paintRules: protomapsL.paintRules(GOOGLE_MAPS_THEME),
         labelRules: protomapsL.labelRules(GOOGLE_MAPS_THEME),
         lang: 'de',
         backgroundColor: '#a5d7f8',
+        maxDataZoom: 15,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (Lokal & DSGVO-konform)',
       });
 
       layer.addTo(map);
@@ -98,7 +104,7 @@ const ProtomapsLayer: React.FC<{ apiKey: string }> = ({ apiKey }) => {
     } catch (err) {
       console.warn('Protomaps layer initialization error:', err);
     }
-  }, [map, apiKey]);
+  }, [map, tileUrl]);
 
   return null;
 };
@@ -146,16 +152,141 @@ const createCustomIcon = (isAmt: boolean, isSelected: boolean) => {
   });
 };
 
+// Deterministic micro-offset for facilities sharing the exact same coordinates (e.g. centroid fallback or single campus)
+function disambiguateCoordinates(facilities: Facility[]): (Facility & { displayCoordinates: [number, number] })[] {
+  const groups = new Map<string, Facility[]>();
+  for (const f of facilities) {
+    if (!f.coordinates || f.coordinates.length !== 2) continue;
+    const key = `${f.coordinates[0].toFixed(5)},${f.coordinates[1].toFixed(5)}`;
+    const list = groups.get(key) || [];
+    list.push(f);
+    groups.set(key, list);
+  }
+
+  const result: (Facility & { displayCoordinates: [number, number] })[] = [];
+
+  groups.forEach((list) => {
+    if (list.length === 1) {
+      result.push({ ...list[0], displayCoordinates: list[0].coordinates });
+    } else {
+      // Disambiguate overlapping markers into an elegant micro-ring (~35m radius)
+      const radius = 0.00035;
+      list.forEach((f, idx) => {
+        const angle = (2 * Math.PI * idx) / list.length;
+        const latOffset = Math.sin(angle) * radius;
+        const lngOffset = Math.cos(angle) * radius * 1.5;
+        result.push({
+          ...f,
+          displayCoordinates: [f.coordinates[0] + latOffset, f.coordinates[1] + lngOffset],
+        });
+      });
+    }
+  });
+
+  return result;
+}
+
+// Custom styled cluster icon reflecting the ratio of Behörden (Blue) and Freie Träger (Emerald)
+const createCustomClusterIcon = (cluster: any) => {
+  const count = cluster.getChildCount();
+  const children = cluster.getAllChildMarkers();
+  let amtCount = 0;
+  let traegerCount = 0;
+
+  for (const child of children) {
+    if (child.options?.isAmt) {
+      amtCount++;
+    } else {
+      traegerCount++;
+    }
+  }
+
+  const hasBoth = amtCount > 0 && traegerCount > 0;
+  const clusterBg = hasBoth
+    ? 'linear-gradient(135deg, #2563eb 50%, #059669 50%)'
+    : amtCount > 0
+    ? '#2563eb'
+    : '#059669';
+
+  return L.divIcon({
+    html: `
+      <div class="relative flex items-center justify-center w-10 h-10 rounded-full text-white font-extrabold text-xs shadow-xl border-2 border-white ring-4 ring-slate-900/10 hover:scale-110 transition-transform cursor-pointer" style="background: ${clusterBg};">
+        <span>${count}</span>
+      </div>
+    `,
+    className: 'custom-polaris-cluster',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+  });
+};
+
 export const LeafletMap: React.FC<LeafletMapProps> = ({
   facilities,
   selectedFacility,
   onSelectFacility,
   onOpenDetails,
   onOpenPrint,
+  selectedDistrict,
+  onSelectDistrict,
 }) => {
   const berlinCenter: [number, number] = [52.518, 13.405];
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-  const protomapsKey = process.env.NEXT_PUBLIC_PROTOMAPS_API_KEY;
+  // 100% GDPR-compliant self-hosted PMTiles source (zero IP leakage to third parties)
+  const pmtilesUrl = process.env.NEXT_PUBLIC_PMTILES_URL || '/tiles/berlin.pmtiles';
+
+  const [showDistricts, setShowDistricts] = useState<boolean>(true);
+
+  // Apply coordinate disambiguation so markers sharing exact coordinates don't occlude
+  const disambiguatedFacilities = useMemo(() => {
+    return disambiguateCoordinates(facilities);
+  }, [facilities]);
+
+  // Dynamic styling for Berlin LOR district boundaries
+  const districtStyle = (feature: any) => {
+    const name = feature?.properties?.name;
+    const isSelected = selectedDistrict && selectedDistrict !== 'all' && name === selectedDistrict;
+
+    return {
+      color: isSelected ? '#1d4ed8' : '#64748b',
+      weight: isSelected ? 2.5 : 1.5,
+      fillColor: isSelected ? '#3b82f6' : '#94a3b8',
+      fillOpacity: isSelected ? 0.2 : 0.03,
+      dashArray: isSelected ? undefined : '4, 4',
+    };
+  };
+
+  const onEachDistrict = (feature: any, layer: any) => {
+    const name = feature?.properties?.name;
+    if (!name) return;
+
+    layer.bindTooltip(
+      `<div class="font-bold text-xs text-slate-900">Bezirk ${name}</div><div class="text-[10px] text-slate-500 font-medium">Zuständigkeit § 86 SGB VIII / § 36 SGB XII</div>`,
+      { sticky: true, className: 'custom-district-tooltip' }
+    );
+
+    layer.on({
+      mouseover: (e: any) => {
+        const l = e.target;
+        if (selectedDistrict !== name) {
+          l.setStyle({
+            weight: 2,
+            color: '#2563eb',
+            fillOpacity: 0.12,
+          });
+        }
+      },
+      mouseout: (e: any) => {
+        const l = e.target;
+        if (selectedDistrict !== name) {
+          l.setStyle(districtStyle(feature));
+        }
+      },
+      click: () => {
+        if (onSelectDistrict) {
+          onSelectDistrict(name as BerlinDistrict);
+        }
+      },
+    });
+  };
 
   return (
     <div className="relative w-full h-full">
@@ -164,40 +295,47 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         zoom={11}
         scrollWheelZoom={true}
         className="w-full h-full z-10"
-        style={{ minHeight: '100%', background: '#e2e8f0' }}
+        style={{ minHeight: '100%', background: '#f4f3f0' }}
+        attributionControl={true}
       >
-        {mapboxToken ? (
-          <TileLayer
-            attribution='&copy; <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-            url={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`}
-            tileSize={256}
-            maxZoom={19}
-          />
-        ) : protomapsKey ? (
-          <ProtomapsLayer apiKey={protomapsKey} />
-        ) : (
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> Mitwirkende'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={19}
-          />
-        )}
+        {/* Self-hosted vector tile layer via Protomaps PMTiles */}
+        <ProtomapsLayer tileUrl={pmtilesUrl} />
 
         <MapController selectedFacility={selectedFacility} />
 
-        {facilities.map((facility) => {
-          const isAmt = facility.institutionType === 'amt';
-          const isSelected = selectedFacility?.id === facility.id;
+        {/* Berlin LOR / Statutory District Boundaries */}
+        {showDistricts && (
+          <GeoJSON
+            key={`districts-${selectedDistrict || 'all'}`}
+            data={berlinBezirkeGeoJson as any}
+            style={districtStyle}
+            onEachFeature={onEachDistrict}
+          />
+        )}
 
-          return (
-            <Marker
-              key={facility.id}
-              position={facility.coordinates}
-              icon={createCustomIcon(isAmt, isSelected)}
-              eventHandlers={{
-                click: () => onSelectFacility(facility),
-              }}
-            >
+        {/* High-performance clustering with dynamic Behörden vs. Freie Träger ratios */}
+        <MarkerClusterGroup
+          chunkedLoading
+          iconCreateFunction={createCustomClusterIcon}
+          maxClusterRadius={45}
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+        >
+          {disambiguatedFacilities.map((facility) => {
+            const isAmt = facility.institutionType === 'amt';
+            const isSelected = selectedFacility?.id === facility.id;
+
+            return (
+              <Marker
+                key={facility.id}
+                position={facility.displayCoordinates}
+                icon={createCustomIcon(isAmt, isSelected)}
+                // @ts-ignore custom marker property for cluster ratio calculation
+                isAmt={isAmt}
+                eventHandlers={{
+                  click: () => onSelectFacility(facility),
+                }}
+              >
               <Popup className="custom-facility-popup" minWidth={260}>
                 <div className="p-1 space-y-2 text-slate-800">
                   {/* Badge */}
@@ -244,7 +382,25 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
             </Marker>
           );
         })}
+        </MarkerClusterGroup>
       </MapContainer>
+
+      {/* District Boundaries (LOR) Toggle */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
+        <button
+          type="button"
+          onClick={() => setShowDistricts(!showDistricts)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-md border transition-all ${
+            showDistricts
+              ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
+              : 'bg-white/95 text-slate-700 hover:text-slate-900 border-slate-200 backdrop-blur-sm'
+          }`}
+          title="Berliner Bezirks- und LOR-Zuständigkeitsgrenzen umschalten"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Bezirksgrenzen (LOR)</span>
+        </button>
+      </div>
 
       {/* Map Legend Overlay */}
       <div className="absolute bottom-5 left-4 z-20 bg-white/95 backdrop-blur-sm p-2.5 rounded-lg shadow-lg border border-slate-200 text-xs space-y-1.5 max-w-[calc(100vw-32px)] sm:max-w-xs pointer-events-auto">
@@ -256,6 +412,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         <div className="flex items-center gap-2">
           <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 border border-white shadow-sm inline-block shrink-0"></span>
           <span className="text-slate-700 font-medium">Freier Träger / NGO (BEW, Treffs, Notschlafstellen)</span>
+        </div>
+        <div className="flex items-center gap-2 pt-0.5 border-t border-slate-100">
+          <span className="w-3.5 h-3.5 rounded-full border border-white shadow-sm inline-block shrink-0" style={{ background: 'linear-gradient(135deg, #2563eb 50%, #059669 50%)' }}></span>
+          <span className="text-slate-500 text-[11px]">Cluster (Zahl = Anzahl Angebote im Kiez)</span>
         </div>
       </div>
     </div>

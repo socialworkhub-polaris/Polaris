@@ -31,7 +31,7 @@ Polaris assists social workers and frontline practitioners in navigating Berlin'
 * **Framework:** [Next.js 14](https://nextjs.org/) (App Router, React 18, TypeScript)
 * **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 * **Database:** [Supabase](https://supabase.com/) (PostgreSQL with Row Level Security)
-* **Mapping:** [Leaflet](https://leafletjs.com/) & [React-Leaflet](https://react-leaflet.js.org/)
+* **Mapping:** [Leaflet](https://leafletjs.com/), [React-Leaflet](https://react-leaflet.js.org/) & [Protomaps PMTiles](https://protomaps.com/) (100% DSGVO / § 35 SGB I konform, Self-Hosted Vector Tiles & LOR-Zuständigkeitsgrenzen)
 * **AI & Search:** DeepSeek API & Exa Neural Search
 * **Icons:** [Lucide React](https://lucide.dev/)
 

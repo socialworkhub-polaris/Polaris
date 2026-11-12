@@ -8,7 +8,7 @@ import { MapWrapper } from '@/components/Map/MapWrapper';
 import { DetailDrawer } from '@/components/DetailDrawer';
 import { ClientPrintModal } from '@/components/ClientPrintModal';
 import { MOCK_FACILITIES } from '@/data/facilities';
-import { Facility, FilterState } from '@/types/facility';
+import { Facility, FilterState, BerlinDistrict } from '@/types/facility';
 import { List, Map as MapIcon } from 'lucide-react';
 import { useBookmarks } from '@/lib/useBookmarks';
 import TriageModal from '@/components/TriageModal';
@@ -273,6 +273,13 @@ export default function Home() {
             onSelectFacility={handleSelectFacility}
             onOpenDetails={handleOpenDetails}
             onOpenPrint={handleOpenPrint}
+            selectedDistrict={filterState.district}
+            onSelectDistrict={(district: BerlinDistrict) =>
+              setFilterState((prev) => ({
+                ...prev,
+                district: prev.district === district ? 'all' : district,
+              }))
+            }
           />
         </div>
 
