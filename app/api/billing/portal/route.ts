@@ -3,6 +3,8 @@ import { stripe } from '@/lib/stripe';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization') || '';

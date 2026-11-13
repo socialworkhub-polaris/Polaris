@@ -4,7 +4,9 @@ if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('STRIPE_SECRET_KEY is not defined in environment variables.');
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const apiKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_for_build';
+
+export const stripe = new Stripe(apiKey, {
   apiVersion: '2024-09-30.acacia' as any,
   appInfo: {
     name: 'Polaris SocialWorkHub',

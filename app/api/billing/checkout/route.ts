@@ -3,6 +3,8 @@ import { stripe, STRIPE_CONFIG } from '@/lib/stripe';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
