@@ -8,7 +8,8 @@ import 'leaflet/dist/leaflet.css';
 import * as protomapsL from 'protomaps-leaflet';
 import { LIGHT } from '@protomaps/basemaps';
 import { Facility, BerlinDistrict } from '@/types/facility';
-import { Building2, HeartHandshake, MapPin, Printer, ChevronRight, Train, Layers } from 'lucide-react';
+import { Building2, HeartHandshake, MapPin, Printer, ChevronRight, Train, Layers, X } from 'lucide-react';
+import { DISTRICT_CENTROIDS } from '@/data/districts';
 import berlinBezirkeGeoJson from '@/data/berlin_bezirke.json';
 
 interface LeafletMapProps {
@@ -94,8 +95,8 @@ const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = DEFAULT_PMTI
         labelRules: protomapsL.labelRules(GOOGLE_MAPS_THEME),
         lang: 'de',
         backgroundColor: '#a5d7f8',
-        maxDataZoom: 15,
-        maxZoom: 18,
+        maxDataZoom: 14,
+        maxZoom: 14,
         attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (Lokal & DSGVO-konform)',
       });
 
@@ -124,6 +125,25 @@ const MapController: React.FC<{ selectedFacility: Facility | null }> = ({ select
       });
     }
   }, [selectedFacility, map]);
+
+  return null;
+};
+
+// Controller component to smoothly fly map to selected district centroid
+const DistrictController: React.FC<{ selectedDistrict?: BerlinDistrict | 'all' }> = ({ selectedDistrict }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedDistrict && selectedDistrict !== 'all') {
+      const coords = DISTRICT_CENTROIDS[selectedDistrict];
+      if (coords) {
+        map.flyTo(coords, 12, {
+          animate: true,
+          duration: 1.0,
+        });
+      }
+    }
+  }, [selectedDistrict, map]);
 
   return null;
 };
@@ -296,8 +316,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       <MapContainer
         center={berlinCenter}
         zoom={11}
-        minZoom={9}
-        maxZoom={18}
+        minZoom={6}
+        maxZoom={14}
         scrollWheelZoom={true}
         className="w-full h-full z-10"
         style={{ minHeight: '100%', background: '#f4f3f0' }}
@@ -307,6 +327,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         <ProtomapsLayer tileUrl={pmtilesUrl} />
 
         <MapController selectedFacility={selectedFacility} />
+        <DistrictController selectedDistrict={selectedDistrict} />
 
         {/* Berlin LOR / Statutory District Boundaries */}
         {showDistricts && (
@@ -323,7 +344,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           chunkedLoading
           iconCreateFunction={createCustomClusterIcon}
           maxClusterRadius={45}
-          disableClusteringAtZoom={16}
+          disableClusteringAtZoom={13}
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
         >
@@ -391,8 +412,23 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         </MarkerClusterGroup>
       </MapContainer>
 
-      {/* District Boundaries (LOR) Toggle */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
+      {/* Top Map Action Overlay (Active District Filter Pill & LOR Toggle) */}
+      <div className="absolute top-4 right-4 z-20 flex items-center flex-wrap gap-2 justify-end pointer-events-auto max-w-[calc(100vw-32px)]">
+        {selectedDistrict && selectedDistrict !== 'all' && (
+          <button
+            type="button"
+            onClick={() => onSelectDistrict && onSelectDistrict('all' as any)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-blue-900 bg-white/95 border border-blue-300 shadow-lg hover:bg-blue-50 transition-all group"
+            title="Bezirks-Filter aufheben (Alle Bezirke anzeigen)"
+          >
+            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>Bezirk: {selectedDistrict}</span>
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 group-hover:bg-blue-200 text-blue-700 ml-0.5 text-[10px]">
+              ✕
+            </span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => setShowDistricts(!showDistricts)}
