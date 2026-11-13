@@ -42,6 +42,11 @@ interface TeamContextType {
     isCrossTeam?: boolean;
   }) => Promise<TeamCalendarEvent>;
   deleteCalendarEvent: (id: string) => Promise<void>;
+  startStripeCheckout: (target: string | { organizationId?: string; teamName?: string }) => Promise<void>;
+  openBillingPortal: (orgId: string) => Promise<void>;
+  updateSeats: (orgId: string, targetSeats: number) => Promise<void>;
+  redeemTrialCode: (orgId: string, code: string) => Promise<{ success: boolean; message: string }>;
+  refreshOrganizations: () => Promise<void>;
 }
 
 const TeamContext = createContext<TeamContextType>({
@@ -72,6 +77,11 @@ const TeamContext = createContext<TeamContextType>({
   loadCalendarEvents: async () => {},
   createCalendarEvent: async () => { throw new Error('Not initialized'); },
   deleteCalendarEvent: async () => {},
+  startStripeCheckout: async () => {},
+  openBillingPortal: async () => {},
+  updateSeats: async () => {},
+  redeemTrialCode: async () => ({ success: false, message: 'Not initialized' }),
+  refreshOrganizations: async () => {},
 });
 
 export const useTeam = () => useContext(TeamContext);
@@ -123,7 +133,12 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
             slug,
             invite_code,
             plan,
-            created_at
+            created_at,
+            stripe_customer_id,
+            stripe_subscription_id,
+            subscription_status,
+            trial_ends_at,
+            seat_limit
           )
         `)
         .eq('user_id', user.id);
@@ -146,6 +161,11 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
             plan: m.organization.plan,
             role: m.role,
             createdAt: m.organization.created_at,
+            subscriptionStatus: m.organization.subscription_status,
+            trialEndsAt: m.organization.trial_ends_at,
+            seatLimit: m.organization.seat_limit || 10,
+            stripeCustomerId: m.organization.stripe_customer_id,
+            stripeSubscriptionId: m.organization.stripe_subscription_id,
           }));
 
         setOrganizations(orgList);
@@ -800,6 +820,90 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
 
+  // 12. Billing Actions
+  const startStripeCheckout = async (target: string | { organizationId?: string; teamName?: string }): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Nicht angemeldet.');
+
+    const payload = typeof target === 'string' ? { organizationId: target } : target;
+
+    const res = await fetch('/api/billing/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Fehler beim Starten des Checkouts.');
+    if (data.url) {
+      window.location.href = data.url;
+    }
+  };
+
+  const openBillingPortal = async (orgId: string): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Nicht angemeldet.');
+
+    const res = await fetch('/api/billing/portal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ organizationId: orgId }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Fehler beim Öffnen des Portals.');
+    if (data.url) {
+      window.location.href = data.url;
+    }
+  };
+
+  const updateSeats = async (orgId: string, targetSeats: number): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Nicht angemeldet.');
+
+    const res = await fetch('/api/billing/update-seats', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ organizationId: orgId, targetSeats }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Fehler beim Anpassen der Plätze.');
+    await loadUserOrganizations();
+  };
+
+  const redeemTrialCode = async (orgId: string, code: string): Promise<{ success: boolean; message: string }> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Nicht angemeldet.');
+
+    const res = await fetch('/api/team/redeem-trial', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ organizationId: orgId, code }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Fehler beim Einlösen des Codes.');
+    await loadUserOrganizations();
+    return { success: true, message: data.message };
+  };
+
   return (
     <TeamContext.Provider
       value={{
@@ -830,6 +934,11 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadCalendarEvents,
         createCalendarEvent,
         deleteCalendarEvent,
+        startStripeCheckout,
+        openBillingPortal,
+        updateSeats,
+        redeemTrialCode,
+        refreshOrganizations: loadUserOrganizations,
       }}
     >
       {children}

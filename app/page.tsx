@@ -15,6 +15,7 @@ import TriageModal from '@/components/TriageModal';
 import EmergencyBar from '@/components/EmergencyBar';
 import { TeamModal } from '@/components/TeamModal';
 import { TeamHubModal } from '@/components/TeamHubModal';
+import BillingSuccessModal from '@/components/BillingSuccessModal';
 
 const INITIAL_FILTERS: FilterState = {
   searchQuery: '',
@@ -340,6 +341,9 @@ export default function Home() {
         onClose={() => setIsDeepLinkJoinOpen(false)}
         initialCode={joinCode}
       />
+
+      {/* Post-Checkout Billing Success Modal */}
+      <BillingSuccessModal />
 
       {/* Team-Zentrale / Schwarzes Brett Modal */}
       {isTeamHubOpen && (

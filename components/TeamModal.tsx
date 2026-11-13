@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  CreditCard,
+  Loader2,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -42,7 +45,12 @@ export const TeamModal: React.FC<TeamModalProps> = ({
     leaveTeam,
     members,
     removeMember,
+    updateSeats,
+    openBillingPortal,
+    startStripeCheckout,
   } = useTeam();
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [seatLoading, setSeatLoading] = useState(false);
   const { t } = useLanguage();
 
   const [tab, setTab] = useState<'overview' | 'invite' | 'create' | 'join'>('overview');
@@ -298,12 +306,20 @@ export const TeamModal: React.FC<TeamModalProps> = ({
 
               {/* If team is selected: Member List */}
               {currentOrganization && (
-                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
+                <>
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-slate-600" />
-                      Team-Mitglieder ({members.length})
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-slate-600" />
+                        Team-Mitglieder ({members.length} von {currentOrganization.seatLimit || 10} Plätzen belegt)
+                      </span>
+                      {members.length >= (currentOrganization.seatLimit || 10) && (
+                        <span className="text-[10px] text-amber-700 font-semibold mt-0.5">
+                          ⚠️ Kontingent voll belegt
+                        </span>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => setTab('invite')}
@@ -352,20 +368,128 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                     })}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-200 flex justify-end">
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                    {currentOrganization.role === 'admin' ? (
+                      <button
+                        type="button"
+                        disabled={seatLoading}
+                        onClick={async () => {
+                          const currentLimit = currentOrganization.seatLimit || 10;
+                          const nextLimit = currentLimit + 1;
+                          if (confirm(`Möchtest du 1 zusätzlichen Platz für dieses Team freischalten? Die monatlichen Kosten erhöhen sich um 7,90 € netto.`)) {
+                            setSeatLoading(true);
+                            setErrorMsg(null);
+                            try {
+                              await updateSeats(currentOrganization.id, nextLimit);
+                              setSuccessMsg(`Team-Plätze erfolgreich auf ${nextLimit} erhöht.`);
+                            } catch (err: any) {
+                              setErrorMsg(err.message || 'Fehler beim Anpassen der Plätze.');
+                            } finally {
+                              setSeatLoading(false);
+                            }
+                          }
+                        }}
+                        className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                      >
+                        {seatLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                        <span>+ Weiteren Platz zubuchen (+7,90 € / Monat)</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">Team-Limit: {currentOrganization.seatLimit || 10} Plätze</span>
+                    )}
+
                     <button
                       type="button"
                       onClick={handleLeaveCurrentTeam}
-                      className="text-[11px] font-medium text-red-600 hover:underline flex items-center gap-1"
+                      className="text-[11px] font-medium text-red-600 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <LogOut className="w-3 h-3" />
                       <span>Team verlassen</span>
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* Team Billing & License Card for Admins */}
+                {currentOrganization.role === 'admin' && (
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-900 text-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">
+                          Abrechnung & Lizenzstatus
+                        </span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        currentOrganization.subscriptionStatus === 'active' || currentOrganization.plan === 'pro'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : currentOrganization.subscriptionStatus === 'trialing'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}>
+                        {currentOrganization.subscriptionStatus === 'active' || currentOrganization.plan === 'pro'
+                          ? '● Team-Lizenz Aktiv'
+                          : currentOrganization.subscriptionStatus === 'trialing'
+                          ? '● 14-Tage Testphase'
+                          : '○ Inaktiv'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      {currentOrganization.subscriptionStatus === 'active' || currentOrganization.plan === 'pro'
+                        ? 'Dein Team nutzt die volle Polaris Team-Lizenz mit unbegrenzten KI-Triagen und geteiltem Wissen.'
+                        : 'Aktiviere die Team-Lizenz oder verwalte deine Rechnungsdaten und SEPA-Lastschriften.'}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {currentOrganization.stripeCustomerId ? (
+                        <button
+                          type="button"
+                          disabled={billingLoading}
+                          onClick={async () => {
+                            setBillingLoading(true);
+                            setErrorMsg(null);
+                            try {
+                              await openBillingPortal(currentOrganization.id);
+                            } catch (err: any) {
+                              setErrorMsg(err.message || 'Fehler beim Öffnen des Stripe Portals.');
+                            } finally {
+                              setBillingLoading(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {billingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5 text-blue-400" />}
+                          <span>Rechnungen & Zahlungsart (Stripe)</span>
+                          <ArrowUpRight className="w-3 h-3 text-slate-400" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={billingLoading}
+                          onClick={async () => {
+                            setBillingLoading(true);
+                            setErrorMsg(null);
+                            try {
+                              await startStripeCheckout(currentOrganization.id);
+                            } catch (err: any) {
+                              setErrorMsg(err.message || 'Fehler beim Starten des Checkouts.');
+                            } finally {
+                              setBillingLoading(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {billingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+                          <span>Team-Lizenz aktivieren (89 € / Monat)</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
           {/* TAB 2: INVITE COLLEAGUES */}
           {tab === 'invite' && currentOrganization && (

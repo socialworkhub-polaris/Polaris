@@ -77,8 +77,15 @@ export function BookmarkProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user]);
 
-  // 3. Toggle Bookmark Funktion
+  // 3. Toggle Bookmark Funktion (Gated to registered accounts)
   const toggleBookmark = useCallback(async (facilityId: string) => {
+    if (!user) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('polaris:open-auth'));
+      }
+      return;
+    }
+
     setBookmarkedIds((prev) => {
       const isSaved = prev.includes(facilityId);
       const next = isSaved

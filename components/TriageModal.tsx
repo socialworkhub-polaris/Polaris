@@ -191,18 +191,40 @@ export default function TriageModal({ isOpen, onClose }: TriageModalProps) {
     setExaError(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const res = await fetch('/api/triage', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error('Fehler beim Abrufen des Stufenplans');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        if (errData?.error === 'LIMIT_REACHED') {
+          setTriageUsage((prev) => ({ ...prev, used: prev.max, allowed: false }));
+          throw new Error('Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht.');
+        }
+        throw new Error(errData?.message || 'Fehler beim Abrufen des Stufenplans');
+      }
 
       const data: TriageResponse = await res.json();
       setResult(data);
       setOriginalResult(data);
       setSelectedLang('de');
+
+      if ((data as any).usage) {
+        setTriageUsage({
+          used: (data as any).usage.used || 0,
+          max: (data as any).usage.max || 3,
+          unlimited: !!(data as any).usage.unlimited,
+          allowed: (data as any).usage.allowed !== false,
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Etwas ist schiefgelaufen.');
     } finally {

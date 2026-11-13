@@ -40,6 +40,15 @@ export default function UserMenu() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  React.useEffect(() => {
+    const handleOpenAuth = () => {
+      setIsOpen(true);
+      setIsRegister(true);
+    };
+    window.addEventListener('polaris:open-auth', handleOpenAuth);
+    return () => window.removeEventListener('polaris:open-auth', handleOpenAuth);
+  }, []);
+
   if (loading) {
     return (
       <div className="h-8 w-8 rounded-full bg-slate-200 animate-pulse border border-slate-300" />

@@ -12,6 +12,11 @@ export interface Organization {
   plan?: string;
   role: TeamRole;
   createdAt?: string;
+  subscriptionStatus?: string;
+  trialEndsAt?: string;
+  seatLimit?: number;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
 }
 
 export interface OrganizationMember {

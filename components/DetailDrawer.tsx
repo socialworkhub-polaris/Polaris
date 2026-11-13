@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
 import { ReportCorrectionModal } from './ReportCorrectionModal';
+import { PersonalNotesSection } from './PersonalNotesSection';
 import { TeamNotesSection } from './TeamNotesSection';
 import { TeamModal } from './TeamModal';
 
@@ -403,6 +404,12 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
                 {facility.internalWorkerNotes}
               </p>
             </div>
+
+            {/* Personal Private Notes */}
+            <PersonalNotesSection
+              facilityId={facility.id}
+              facilityName={facility.name}
+            />
 
             {/* Shared Team Intelligence */}
             <TeamNotesSection
