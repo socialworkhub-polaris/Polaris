@@ -134,7 +134,8 @@ export async function POST(req: Request) {
         .eq('id', org.id);
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const origin = req.headers.get('origin') || process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const appUrl = origin.replace(/\/$/, '');
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({

@@ -18,4 +18,5 @@ export const STRIPE_CONFIG = {
   productId: process.env.STRIPE_PRODUCT_ID || 'prod_VcXOayy3fqC9mm',
   teamPriceId: process.env.STRIPE_TEAM_PRICE_ID || 'price_1UbIK9EFxqhrZdwx7T23WYos',
   extraSeatPriceId: process.env.STRIPE_EXTRA_SEAT_PRICE_ID || 'price_1UbOshEFxqhrZdwx5rDAWLXm',
+  publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
 };

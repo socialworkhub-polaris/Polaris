@@ -46,7 +46,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const origin = req.headers.get('origin') || process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const appUrl = origin.replace(/\/$/, '');
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: org.stripe_customer_id,
       return_url: `${appUrl}/`,
