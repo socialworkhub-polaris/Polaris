@@ -440,7 +440,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                         onClick={async () => {
                           const currentLimit = currentOrganization.seatLimit || 10;
                           const nextLimit = currentLimit + 1;
-                          if (confirm(`Möchtest du 1 zusätzlichen Platz für dieses Team freischalten? Die monatlichen Kosten erhöhen sich um 7,90 € netto.`)) {
+                          if (confirm(`Möchtest du 1 zusätzlichen Platz für dieses Team freischalten? Die monatlichen Kosten erhöhen sich um 7,90 € (inkl. MwSt.).`)) {
                             setSeatLoading(true);
                             setErrorMsg(null);
                             try {
@@ -456,7 +456,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                         className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                       >
                         {seatLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                        <span>+ Weiteren Platz zubuchen (+7,90 € / Monat)</span>
+                        <span>+ Weiteren Platz zubuchen (+7,90 € / Monat inkl. MwSt.)</span>
                       </button>
                     ) : (
                       <span className="text-[11px] text-slate-400">Team-Limit: {currentOrganization.seatLimit || 10} Plätze</span>

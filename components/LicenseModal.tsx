@@ -202,7 +202,7 @@ Mit freundlichen Grüßen,
                   </span>
                   <div className="text-3xl font-black text-white mt-1 flex items-baseline gap-2">
                     <span>89 €</span>
-                    <span className="text-xs font-normal text-slate-400">/ Monat (zzgl. USt.)</span>
+                    <span className="text-xs font-normal text-slate-400">/ Monat (inkl. 19 % MwSt.)</span>
                   </div>
                   {/* PROMINENT MONTHLY TERMINATION BADGE */}
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-300 text-[11px] font-bold mt-2">
@@ -217,7 +217,7 @@ Mit freundlichen Grüßen,
                     <span>10 Fachkraft-Zugänge inklusive</span>
                   </div>
                   <div className="text-xs text-slate-300 font-medium">
-                    Zusatzplätze flexibel: <span className="text-emerald-400 font-bold">+7,90 €</span> / Monat je weiterem Platz
+                    Zusatzplätze flexibel: <span className="text-emerald-400 font-bold">+7,90 €</span> / Monat (inkl. MwSt.)
                   </div>
                 </div>
               </div>
@@ -320,7 +320,7 @@ Mit freundlichen Grüßen,
 
               <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 space-y-1">
                 <div className="flex items-center justify-between text-slate-300 font-semibold text-[10px] sm:text-[11px]">
-                  <span>89,00 € zzgl. 19 % USt. (105,91 € brutto)</span>
+                  <span>89,00 € / Monat (inkl. 19 % MwSt. – 74,79 € netto)</span>
                   <span className="text-emerald-400">Monatlich kündbar</span>
                 </div>
                 <p className="text-[10px] text-slate-500 leading-relaxed">

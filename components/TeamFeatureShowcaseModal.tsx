@@ -471,7 +471,7 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
                   </div>
                   <div className="text-right">
                     <div className="text-base font-black text-white">89 €</div>
-                    <div className="text-[10px] text-slate-400">/ Monat (zzgl. USt.)</div>
+                    <div className="text-[10px] text-slate-400">/ Monat (inkl. 19 % MwSt.)</div>
                   </div>
                 </div>
 
@@ -512,7 +512,7 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
                     <RotateCcw className="w-3 h-3" />
                     Monatlich kündbar
                   </span>
-                  <span>Weitere Plätze: +7,90 € / Monat</span>
+                  <span>Weitere Plätze: +7,90 € / Monat (inkl. MwSt.)</span>
                 </div>
               </div>
 
@@ -556,7 +556,7 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
             {/* Legal B2B & Tax Transparency */}
             <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 space-y-1">
               <div className="flex items-center justify-between text-slate-300 font-semibold text-[10px] sm:text-[11px]">
-                <span>89,00 € zzgl. 19 % USt. (105,91 € brutto)</span>
+                <span>89,00 € / Monat (inkl. 19 % MwSt. – 74,79 € netto)</span>
                 <span className="text-emerald-400 font-bold">Monatlich kündbar</span>
               </div>
               <p className="text-[10px] text-slate-500 leading-relaxed">
