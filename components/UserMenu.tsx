@@ -334,23 +334,6 @@ export default function UserMenu() {
   return (
     <>
       <div className="flex items-center gap-1.5">
-        {/* Active Team Workspace Button */}
-        <button
-          type="button"
-          onClick={() => setIsTeamModalOpen(true)}
-          title="Team-Workspaces & Träger-Notizen"
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition border cursor-pointer ${
-            currentOrganization
-              ? 'bg-indigo-950/70 text-indigo-300 border-indigo-700/60 hover:bg-indigo-900/80 shadow-xs'
-              : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="max-w-[110px] truncate">
-            {currentOrganization ? currentOrganization.name : 'Team beitreten'}
-          </span>
-        </button>
-
         <button
           onClick={openProfileEdit}
           title="Fachkraft-Profil bearbeiten"
@@ -376,7 +359,7 @@ export default function UserMenu() {
         <button
           onClick={() => logout()}
           title="Abmelden"
-          className="p-1.5 text-slate-400 hover:text-red-400 rounded-md hover:bg-slate-800 transition"
+          className="p-1.5 text-slate-400 hover:text-red-400 rounded-md hover:bg-slate-800 transition cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
         </button>
@@ -492,12 +475,6 @@ export default function UserMenu() {
           </div>
         </div>
       )}
-
-      {/* Team Spaces Modal */}
-      <TeamModal
-        isOpen={isTeamModalOpen}
-        onClose={() => setIsTeamModalOpen(false)}
-      />
     </>
   );
 }

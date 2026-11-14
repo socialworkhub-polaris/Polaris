@@ -3,11 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare, ClipboardList } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
+import TeamSelectorDropdown from '@/components/TeamSelectorDropdown';
+import { TeamModal } from '@/components/TeamModal';
 import { LegalModal } from '@/components/LegalModal';
 import LicenseModal from '@/components/LicenseModal';
 import FeedbackModal from '@/components/FeedbackModal';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTeam } from '@/lib/TeamContext';
+import { useAuth } from '@/lib/AuthContext';
 
 export interface FacilityCounts {
   total: number;
@@ -42,8 +45,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
   const { currentOrganization, announcements } = useTeam();
+  const { user } = useAuth();
   const hasUrgentOrPinned = (announcements || []).some((a) => a?.isPinned || a?.priority === 'urgent');
   const headerRef = useRef<HTMLElement>(null);
 
@@ -145,10 +150,15 @@ export const Header: React.FC<HeaderProps> = ({
 
           </div>
 
-          {/* Rechter Bereich: Schwarzes Brett, Team & Profil, Language Switcher */}
+          {/* Rechter Bereich: Team-Dropdown, Schwarzes Brett, Account/Profil & Abmelden, Language Switcher */}
           <div className="flex items-center gap-2 sm:gap-2.5 text-xs shrink-0 ml-auto">
-            {/* Schwarzes Brett & Dienstübergabe Button (gruppiert bei Team & Profil) */}
-            {currentOrganization && onOpenTeamHub && (
+            {/* 1. Team Selector Dropdown (Links von Schwarzem Brett) */}
+            {user && (
+              <TeamSelectorDropdown onOpenTeamModal={() => setIsTeamModalOpen(true)} />
+            )}
+
+            {/* 2. Schwarzes Brett & Dienstübergabe Button (gruppiert bei Team & Profil) */}
+            {user && currentOrganization && onOpenTeamHub && (
               <button
                 type="button"
                 onClick={onOpenTeamHub}
@@ -156,17 +166,17 @@ export const Header: React.FC<HeaderProps> = ({
                 title={`Schwarzes Brett & Dienstübergabe (${currentOrganization.name})`}
               >
                 <ClipboardList className="w-3.5 h-3.5 text-indigo-200" />
-                <span>Schwarzes Brett</span>
+                <span className="hidden sm:inline">Schwarzes Brett</span>
                 {hasUrgentOrPinned && (
                   <span className="w-2 h-2 rounded-full bg-rose-400 ring-2 ring-indigo-900 animate-pulse" />
                 )}
               </button>
             )}
 
-            {/* Benutzer-Profil / Team Workspace / Anmelden */}
+            {/* 3 & 4. Benutzer-Profil (Account) & Abmelden (Sign Out) */}
             <UserMenu />
 
-            {/* Language Switcher (DE | EN) - Ganz rechts */}
+            {/* 5. Language Switcher (DE | EN) - Ganz rechts */}
             <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-800/90 border border-slate-700/80 text-[11px] font-bold shrink-0">
               <button
                 type="button"
@@ -203,6 +213,11 @@ export const Header: React.FC<HeaderProps> = ({
       <FeedbackModal
         isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}
+      />
+
+      <TeamModal
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
       />
     </header>
   );
