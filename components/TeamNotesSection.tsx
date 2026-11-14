@@ -14,6 +14,7 @@ import {
   FileText,
   Loader2,
   Lock,
+  Sparkles,
 } from 'lucide-react';
 import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -158,35 +159,103 @@ export const TeamNotesSection: React.FC<TeamNotesSectionProps> = ({
     }
   };
 
-  // State 1: User not logged in or no team selected
+  const isTeamActive = !!currentOrganization && (
+    currentOrganization.subscriptionStatus === 'active' ||
+    currentOrganization.subscriptionStatus === 'trialing' ||
+    currentOrganization.plan === 'pro'
+  );
+
+  // State 1: User not logged in or in personal mode
   if (!currentOrganization) {
     return (
-      <div className="border border-blue-200 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 rounded-xl p-4 space-y-3">
+      <div className="border border-indigo-200 bg-gradient-to-r from-blue-50/70 via-indigo-50/70 to-slate-50 rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-blue-700" />
-            <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900">
+            <Building2 className="w-4 h-4 text-indigo-700" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-950">
               Team-Wissen & Interne Vermerke
             </h4>
           </div>
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
             <Lock className="w-3 h-3" />
-            <span>Geschützt</span>
+            <span>Team-Funktion</span>
           </span>
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed">
-          Teile vertrauliche Ansprechpartner, Klingelanweisungen, Urlaubsvertretungen und Aufnahmestopps exklusiv mit deinem Streetwork- oder Träger-Team.
+          Teile vertrauliche Ansprechpartner*innen, Klingelanweisungen, Urlaubsvertretungen und Aufnahmestopps exklusiv mit deinem Streetwork- oder Träger-Team.
         </p>
 
-        <button
-          type="button"
-          onClick={onOpenTeamModal}
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Team beitreten oder erstellen</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('polaris:open-team-showcase'));
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Vorteile ansehen & 14 Tage testen</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenTeamModal}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          >
+            <Users className="w-3.5 h-3.5 text-slate-500" />
+            <span>Team beitreten</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // State 1.5: Selected team is currently inactive
+  if (!isTeamActive) {
+    return (
+      <div className="border border-amber-300 bg-gradient-to-r from-amber-50/80 via-orange-50/50 to-indigo-50/60 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-amber-800" />
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-950">
+              Team-Wissen ({currentOrganization.name})
+            </h4>
+          </div>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+            <Lock className="w-3 h-3" />
+            <span>Lizenz inaktiv</span>
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-700 leading-relaxed">
+          Geteiltes Wissen an Einrichtungen ist Teil der <strong>Team-Lizenz</strong>. Aktiviere die 14-tägige kostenlose Testphase für <strong>{currentOrganization.name}</strong>, um interne Notizen und das Schwarze Brett für alle Kolleg*innen freizuschalten.
+        </p>
+
+        <div className="flex items-center gap-2.5 flex-wrap pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('polaris:open-team-showcase'));
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>14 Tage gratis freischalten</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenTeamModal}
+            className="text-xs text-slate-600 hover:text-slate-900 underline font-medium cursor-pointer"
+          >
+            Team-Einstellungen
+          </button>
+        </div>
       </div>
     );
   }

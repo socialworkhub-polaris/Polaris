@@ -31,6 +31,7 @@ import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
 import { Facility } from '@/types/facility';
 import { AnnouncementPriority, NoteCategory, CalendarEventCategory, TeamCalendarEvent } from '@/types/team';
+import TeamFeatureShowcaseModal from '@/components/TeamFeatureShowcaseModal';
 
 interface TeamHubModalProps {
   isOpen: boolean;
@@ -242,8 +243,30 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
     return days;
   }, [currentMonthDate, calendarEvents]);
 
-  // Guard: if closed or no active team, render nothing (all hooks have already run!)
-  if (!isOpen || !currentOrganization) return null;
+  // Guard: if closed, render nothing
+  if (!isOpen) return null;
+
+  const isTeamActive = !!currentOrganization && (
+    currentOrganization.subscriptionStatus === 'active' ||
+    currentOrganization.subscriptionStatus === 'trialing' ||
+    currentOrganization.plan === 'pro'
+  );
+
+  // If no team selected or team subscription is inactive, show the showcase modal
+  if (!currentOrganization || !isTeamActive) {
+    return (
+      <TeamFeatureShowcaseModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onOpenTeamModal={onOpenTeamSettings}
+        onOpenLicenseModal={() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('polaris:open-license'));
+          }
+        }}
+      />
+    );
+  }
 
   const isAdmin = currentOrganization.role === 'admin';
 

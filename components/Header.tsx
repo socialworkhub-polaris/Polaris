@@ -8,6 +8,7 @@ import { TeamModal } from '@/components/TeamModal';
 import { LegalModal } from '@/components/LegalModal';
 import LicenseModal from '@/components/LicenseModal';
 import FeedbackModal from '@/components/FeedbackModal';
+import TeamFeatureShowcaseModal from '@/components/TeamFeatureShowcaseModal';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -46,11 +47,33 @@ export const Header: React.FC<HeaderProps> = ({
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [isShowcaseOpen, setIsShowcaseOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
   const { currentOrganization, announcements } = useTeam();
   const { user } = useAuth();
   const hasUrgentOrPinned = (announcements || []).some((a) => a?.isPinned || a?.priority === 'urgent');
   const headerRef = useRef<HTMLElement>(null);
+
+  const isTeamActive = !!currentOrganization && (
+    currentOrganization.subscriptionStatus === 'active' ||
+    currentOrganization.subscriptionStatus === 'trialing' ||
+    currentOrganization.plan === 'pro'
+  );
+
+  useEffect(() => {
+    const handleOpenShowcase = () => setIsShowcaseOpen(true);
+    const handleOpenLicense = () => setIsLicenseOpen(true);
+    const handleOpenTeam = () => setIsTeamModalOpen(true);
+
+    window.addEventListener('polaris:open-team-showcase', handleOpenShowcase);
+    window.addEventListener('polaris:open-license', handleOpenLicense);
+    window.addEventListener('polaris:open-team', handleOpenTeam);
+    return () => {
+      window.removeEventListener('polaris:open-team-showcase', handleOpenShowcase);
+      window.removeEventListener('polaris:open-license', handleOpenLicense);
+      window.removeEventListener('polaris:open-team', handleOpenTeam);
+    };
+  }, []);
 
   useEffect(() => {
     if (!headerRef.current) return;
@@ -158,18 +181,31 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             {/* 2. Schwarzes Brett & Dienstübergabe Button (gruppiert bei Team & Profil) */}
-            {user && currentOrganization && onOpenTeamHub && (
+            {isTeamActive && onOpenTeamHub ? (
               <button
                 type="button"
                 onClick={onOpenTeamHub}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer shrink-0"
-                title={`Schwarzes Brett & Dienstübergabe (${currentOrganization.name})`}
+                title={`Schwarzes Brett & Dienstübergabe (${currentOrganization?.name || 'Team'})`}
               >
                 <ClipboardList className="w-3.5 h-3.5 text-indigo-200" />
                 <span className="hidden sm:inline">Schwarzes Brett</span>
                 {hasUrgentOrPinned && (
                   <span className="w-2 h-2 rounded-full bg-rose-400 ring-2 ring-indigo-900 animate-pulse" />
                 )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsShowcaseOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 hover:text-white border border-indigo-700/60 rounded-lg transition-colors cursor-pointer text-xs font-medium shrink-0"
+                title="Schwarzes Brett & Dienstübergabe (Träger- & Team-Funktion)"
+              >
+                <ClipboardList className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Schwarzes Brett</span>
+                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1 py-0.2 rounded border border-indigo-500/30 font-bold hidden md:inline">
+                  Team
+                </span>
               </button>
             )}
 
@@ -208,6 +244,14 @@ export const Header: React.FC<HeaderProps> = ({
       <LicenseModal
         isOpen={isLicenseOpen}
         onClose={() => setIsLicenseOpen(false)}
+        onOpenTeamModal={() => setIsTeamModalOpen(true)}
+      />
+
+      <TeamFeatureShowcaseModal
+        isOpen={isShowcaseOpen}
+        onClose={() => setIsShowcaseOpen(false)}
+        onOpenLicenseModal={() => setIsLicenseOpen(true)}
+        onOpenTeamModal={() => setIsTeamModalOpen(true)}
       />
 
       <FeedbackModal
