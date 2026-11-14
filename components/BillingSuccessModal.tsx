@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Copy, Share2, Sparkles, Users, X, ArrowRight } from 'lucide-react';
 import { useTeam } from '@/lib/TeamContext';
+import { supabase } from '@/lib/supabase';
 
 export default function BillingSuccessModal() {
   const { currentOrganization, organizations, refreshOrganizations } = useTeam();
@@ -14,9 +15,35 @@ export default function BillingSuccessModal() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('billing') === 'success') {
       setIsOpen(true);
-      if (refreshOrganizations) {
-        refreshOrganizations();
-      }
+      const sessionId = params.get('session_id');
+      const orgId = params.get('org_id');
+
+      const verifyAndRefresh = async () => {
+        try {
+          if (sessionId) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              await fetch('/api/billing/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ sessionId, organizationId: orgId }),
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Verify call error:', e);
+        } finally {
+          if (refreshOrganizations) {
+            await refreshOrganizations();
+          }
+        }
+      };
+
+      verifyAndRefresh();
+
       // Clean query params from URL without reload
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, '', cleanUrl);

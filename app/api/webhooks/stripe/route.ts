@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         const subscriptionId = session.subscription;
 
         if (organizationId) {
-          await supabase
+          await supabaseAdmin
             .from('organizations')
             .update({
               plan: 'pro',
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         const customerId = subscription.customer;
         const status = subscription.status; // 'active', 'past_due', 'canceled', etc.
 
-        await supabase
+        await supabaseAdmin
           .from('organizations')
           .update({
             subscription_status: status,
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        await supabase
+        await supabaseAdmin
           .from('organizations')
           .update({
             subscription_status: 'canceled',
