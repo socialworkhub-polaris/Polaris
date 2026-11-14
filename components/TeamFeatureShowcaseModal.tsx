@@ -167,16 +167,16 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
 
           {/* Context Banner if current team is inactive */}
           {isCurrentTeamInactive && (
-            <div className="mt-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs text-amber-200">
-              <div className="flex items-center gap-2">
+            <div className="mt-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-200">
+              <div className="flex items-center gap-2 min-w-0">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>
+                <span className="truncate">
                   Du bist im Team <strong>{currentOrganization?.name}</strong>. Die Team-Lizenz ist derzeit inaktiv.
                 </span>
               </div>
               <button
                 onClick={handleStartTrial}
-                className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold text-[11px] border border-amber-400/30 transition cursor-pointer"
+                className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold text-[11px] border border-amber-400/30 transition cursor-pointer shrink-0"
               >
                 14 Tage aktivieren
               </button>
@@ -185,7 +185,7 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-6 overflow-y-auto space-y-6 text-slate-300 text-sm">
+        <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-6 text-slate-300 text-sm max-w-full">
           
           {/* Feature Showcase Tabs */}
           <div>
@@ -517,49 +517,48 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
           )}
 
           {/* Action CTAs */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-950 to-indigo-950/40 border border-indigo-500/30 space-y-3.5 shadow-xl">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div>
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-950 to-indigo-950/40 border border-indigo-500/30 space-y-4 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-bold text-white flex items-center gap-2">
                   <span>Bereit, dein Team zu verbinden?</span>
                 </h4>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                   Schalte das Schwarze Brett, geteiltes Wissen und unbegrenzte KI-Triagen für bis zu 10 Fachkräfte frei – monatlich kündbar.
                 </p>
               </div>
 
               {/* Action Button Group */}
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                {/* Direct Buy Button */}
+              <div className="shrink-0 w-full md:w-auto">
                 <button
                   type="button"
                   onClick={handleStartCheckout}
                   disabled={checkoutLoading}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all hover:shadow-lg cursor-pointer shrink-0 disabled:opacity-50"
+                  className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all hover:shadow-lg cursor-pointer disabled:opacity-50"
                 >
-                  <CreditCard className="w-4 h-4 text-emerald-200" />
+                  <CreditCard className="w-4 h-4 text-emerald-200 shrink-0" />
                   <span>{checkoutLoading ? 'Verbinde...' : 'Team-Lizenz buchen (89 € / Monat)'}</span>
                 </button>
               </div>
             </div>
 
             {/* Sub-actions / Team join helper */}
-            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-slate-400">
               <button
                 type="button"
                 onClick={handleJoinTeam}
-                className="hover:text-indigo-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                className="hover:text-indigo-300 transition-colors inline-flex items-center gap-1.5 cursor-pointer text-left"
               >
-                <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Code von Kolleg*innen erhalten? <strong>Team beitreten</strong></span>
+                <KeyRound className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>Code von Kolleg*innen erhalten? <strong className="text-indigo-300">Team beitreten</strong></span>
               </button>
 
               <button
                 type="button"
                 onClick={handleStartTrial}
-                className="hover:text-slate-200 transition-colors inline-flex items-center gap-1.5 cursor-pointer text-[11px]"
+                className="hover:text-slate-200 transition-colors inline-flex items-center gap-1.5 cursor-pointer text-[11px] text-left sm:text-right"
               >
-                <FileText className="w-3.5 h-3.5 text-slate-400" />
+                <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span>Kauf auf Rechnung für Träger / Behörde</span>
               </button>
             </div>
