@@ -524,31 +524,21 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
                   <span>Bereit, dein Team zu verbinden?</span>
                 </h4>
                 <p className="text-xs text-slate-400">
-                  Starte sofort 14 Tage unverbindlich – ganz ohne Risiko und ohne Zahlungsdaten.
+                  Schalte das Schwarze Brett, geteiltes Wissen und unbegrenzte KI-Triagen für bis zu 10 Fachkräfte frei – monatlich kündbar.
                 </p>
               </div>
 
               {/* Action Button Group */}
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                {/* 14-Day Free Pilot Button */}
-                <button
-                  type="button"
-                  onClick={handleStartTrial}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md transition-all hover:shadow-lg cursor-pointer shrink-0"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>14 Tage gratis testen</span>
-                </button>
-
                 {/* Direct Buy Button */}
                 <button
                   type="button"
                   onClick={handleStartCheckout}
                   disabled={checkoutLoading}
-                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all hover:shadow-lg cursor-pointer shrink-0 disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all hover:shadow-lg cursor-pointer shrink-0 disabled:opacity-50"
                 >
                   <CreditCard className="w-4 h-4 text-emerald-200" />
-                  <span>{checkoutLoading ? 'Verbinde...' : 'Lizenz buchen (89 €)'}</span>
+                  <span>{checkoutLoading ? 'Verbinde...' : 'Team-Lizenz buchen (89 € / Monat)'}</span>
                 </button>
               </div>
             </div>
