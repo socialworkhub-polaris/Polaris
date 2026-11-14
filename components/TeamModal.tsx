@@ -19,6 +19,8 @@ import {
   CreditCard,
   Loader2,
   ArrowUpRight,
+  ShieldCheck,
+  Info,
 } from 'lucide-react';
 import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -45,12 +47,14 @@ export const TeamModal: React.FC<TeamModalProps> = ({
     leaveTeam,
     members,
     removeMember,
+    updateMemberRole,
     updateSeats,
     openBillingPortal,
     startStripeCheckout,
   } = useTeam();
   const [billingLoading, setBillingLoading] = useState(false);
   const [seatLoading, setSeatLoading] = useState(false);
+  const [roleLoadingId, setRoleLoadingId] = useState<string | null>(null);
   const { t } = useLanguage();
 
   const [tab, setTab] = useState<'overview' | 'invite' | 'create' | 'join'>('overview');
@@ -353,20 +357,80 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                               {m.role === 'admin' ? 'Admin' : 'Mitglied'}
                             </span>
                             {isTeamAdmin && !isMe && (
-                              <button
-                                type="button"
-                                onClick={() => removeMember(m.id)}
-                                className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"
-                                title="Mitglied entfernen"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                {m.role !== 'admin' && (
+                                  <button
+                                    type="button"
+                                    disabled={roleLoadingId === m.userId}
+                                    onClick={async () => {
+                                      if (confirm(`Möchtest du ${m.userName} zum Team-Admin ernennen?`)) {
+                                        setRoleLoadingId(m.userId);
+                                        setErrorMsg(null);
+                                        try {
+                                          await updateMemberRole(currentOrganization.id, m.userId, 'admin');
+                                          setSuccessMsg(`${m.userName} ist jetzt Team-Admin.`);
+                                        } catch (err: any) {
+                                          setErrorMsg(err.message || 'Fehler beim Ändern der Rolle.');
+                                        } finally {
+                                          setRoleLoadingId(null);
+                                        }
+                                      }
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+                                    title="Zum Team-Admin ernennen"
+                                  >
+                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeMember(m.id)}
+                                  className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"
+                                  title="Mitglied entfernen"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Seat optimization helper banner for admins */}
+                  {currentOrganization.role === 'admin' && (currentOrganization.seatLimit || 10) > 10 && (currentOrganization.seatLimit || 10) > members.length && (
+                    <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-blue-900">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>
+                          <strong>{(currentOrganization.seatLimit || 10) - members.length} ungenutzte bezahlte Plätze.</strong>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={seatLoading}
+                        onClick={async () => {
+                          const target = Math.max(10, members.length);
+                          if (confirm(`Möchtest du die bezahlten Plätze auf ${target} reduzieren? Die Monatsgebühr in Stripe wird sofort herabgestuft.`)) {
+                            setSeatLoading(true);
+                            setErrorMsg(null);
+                            try {
+                              await updateSeats(currentOrganization.id, target);
+                              setSuccessMsg(`Plätze erfolgreich auf ${target} angepasst.`);
+                            } catch (err: any) {
+                              setErrorMsg(err.message || 'Fehler beim Anpassen der Plätze.');
+                            } finally {
+                              setSeatLoading(false);
+                            }
+                          }
+                        }}
+                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold cursor-pointer transition shrink-0"
+                      >
+                        Auf {Math.max(10, members.length)} Plätze anpassen
+                      </button>
+                    </div>
+                  )}
 
                   <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
                     {currentOrganization.role === 'admin' ? (
@@ -420,22 +484,22 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                         </span>
                       </div>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        currentOrganization.subscriptionStatus === 'active' || currentOrganization.plan === 'pro'
+                        currentOrganization.subscriptionStatus === 'active'
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : currentOrganization.subscriptionStatus === 'trialing'
+                          : currentOrganization.subscriptionStatus === 'trialing' && (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date())
                           ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                           : 'bg-slate-800 text-slate-400 border border-slate-700'
                       }`}>
-                        {currentOrganization.subscriptionStatus === 'active' || currentOrganization.plan === 'pro'
+                        {currentOrganization.subscriptionStatus === 'active'
                           ? '● Team-Lizenz Aktiv'
-                          : currentOrganization.subscriptionStatus === 'trialing'
+                          : currentOrganization.subscriptionStatus === 'trialing' && (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date())
                           ? '● 14-Tage Testphase'
                           : '○ Inaktiv'}
                       </span>
                     </div>
 
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      {currentOrganization.subscriptionStatus === 'active' || currentOrganization.plan === 'pro'
+                      {currentOrganization.subscriptionStatus === 'active'
                         ? 'Dein Team nutzt die volle Polaris Team-Lizenz mit unbegrenzten KI-Triagen und geteiltem Wissen.'
                         : 'Aktiviere die Team-Lizenz oder verwalte deine Rechnungsdaten und SEPA-Lastschriften.'}
                     </p>

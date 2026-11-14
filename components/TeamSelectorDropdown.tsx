@@ -49,14 +49,15 @@ export default function TeamSelectorDropdown({ onOpenTeamModal }: TeamSelectorDr
   };
 
   const getStatusBadge = (org: Organization) => {
-    if (org.subscriptionStatus === 'active' || org.plan === 'pro') {
+    if (org.subscriptionStatus === 'active') {
       return (
         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
           Aktiv
         </span>
       );
     }
-    if (org.subscriptionStatus === 'trialing') {
+    const isTrialValid = org.subscriptionStatus === 'trialing' && (!org.trialEndsAt || new Date(org.trialEndsAt) > new Date());
+    if (isTrialValid) {
       return (
         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
           Testphase

@@ -9,15 +9,21 @@ export async function POST(req: Request) {
   const signature = req.headers.get('stripe-signature');
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
   let event: any;
 
   try {
     if (webhookSecret && signature) {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } else if (isProduction) {
+      // In production, strictly reject unauthenticated webhook requests
+      console.error('[Stripe Webhook] Rejected: Missing STRIPE_WEBHOOK_SECRET or stripe-signature in production');
+      return NextResponse.json({ error: 'UNAUTHORIZED_WEBHOOK' }, { status: 401 });
     } else {
       // In local dev without Stripe CLI listener secret, parse directly with warning
       event = JSON.parse(body);
-      console.warn('Stripe Webhook processed without signature verification (STRIPE_WEBHOOK_SECRET not set)');
+      console.warn('[Stripe Webhook] DEV MODE: Processed without signature verification (STRIPE_WEBHOOK_SECRET not set)');
     }
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message);
@@ -51,16 +57,19 @@ export async function POST(req: Request) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         const customerId = subscription.customer;
-        const status = subscription.status; // 'active', 'past_due', 'canceled', etc.
+        const status = subscription.status; // 'active', 'trialing', 'past_due', 'canceled', 'unpaid'
+        const isActive = status === 'active' || status === 'trialing';
 
         await supabaseAdmin
           .from('organizations')
           .update({
+            plan: isActive ? 'pro' : 'pilot',
             subscription_status: status,
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_customer_id', customerId);
+        console.log(`[Stripe Webhook] Subscription updated for customer ${customerId}: status=${status}, plan=${isActive ? 'pro' : 'pilot'}`);
         break;
       }
 
@@ -71,11 +80,12 @@ export async function POST(req: Request) {
         await supabaseAdmin
           .from('organizations')
           .update({
+            plan: 'pilot',
             subscription_status: 'canceled',
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_customer_id', customerId);
-        console.log(`[Stripe Webhook] Subscription canceled for customer ${customerId}`);
+        console.log(`[Stripe Webhook] Subscription canceled for customer ${customerId}: reset plan to pilot`);
         break;
       }
 

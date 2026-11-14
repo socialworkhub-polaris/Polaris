@@ -137,7 +137,7 @@ export async function POST(req: Request) {
     const origin = req.headers.get('origin') || process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const appUrl = origin.replace(/\/$/, '');
 
-    // Create Stripe Checkout Session
+    // Create Stripe Checkout Session (supports Card, SEPA Direct Debit, and wallet payments via Stripe Dashboard)
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,

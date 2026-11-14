@@ -46,6 +46,7 @@ interface TeamContextType {
   openBillingPortal: (orgId: string) => Promise<void>;
   updateSeats: (orgId: string, targetSeats: number) => Promise<void>;
   redeemTrialCode: (orgId: string, code: string) => Promise<{ success: boolean; message: string }>;
+  updateMemberRole: (orgId: string, memberUserId: string, newRole: 'admin' | 'member') => Promise<void>;
   refreshOrganizations: () => Promise<void>;
 }
 
@@ -60,6 +61,7 @@ const TeamContext = createContext<TeamContextType>({
   members: [],
   loadMembers: async () => {},
   removeMember: async () => {},
+  updateMemberRole: async () => {},
   notesCountByFacility: {},
   fetchNotesForFacility: async () => [],
   addNoteForFacility: async () => { throw new Error('Not initialized'); },
@@ -904,6 +906,32 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true, message: data.message };
   };
 
+  const updateMemberRole = async (orgId: string, memberUserId: string, newRole: 'admin' | 'member'): Promise<void> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Nicht angemeldet.');
+
+    const { data, error } = await supabase.rpc('update_member_role', {
+      p_org_id: orgId,
+      p_target_user_id: memberUserId,
+      p_new_role: newRole,
+    });
+
+    if (error) {
+      const { error: directErr } = await supabase
+        .from('organization_members')
+        .update({ role: newRole })
+        .eq('organization_id', orgId)
+        .eq('user_id', memberUserId);
+      if (directErr) throw new Error(directErr.message || 'Fehler beim Aktualisieren der Rolle.');
+    } else if (data && !data.success) {
+      throw new Error(data.message || 'Fehler beim Aktualisieren der Rolle.');
+    }
+
+    await loadMembers();
+    await loadUserOrganizations();
+  };
+
   return (
     <TeamContext.Provider
       value={{
@@ -917,6 +945,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         members,
         loadMembers,
         removeMember,
+        updateMemberRole,
         notesCountByFacility,
         fetchNotesForFacility,
         addNoteForFacility,

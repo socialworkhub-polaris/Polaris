@@ -161,8 +161,8 @@ export const TeamNotesSection: React.FC<TeamNotesSectionProps> = ({
 
   const isTeamActive = !!currentOrganization && (
     currentOrganization.subscriptionStatus === 'active' ||
-    currentOrganization.subscriptionStatus === 'trialing' ||
-    currentOrganization.plan === 'pro'
+    (currentOrganization.subscriptionStatus === 'trialing' &&
+      (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date()))
   );
 
   // State 1: User not logged in or in personal mode

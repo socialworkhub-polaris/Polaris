@@ -179,7 +179,6 @@ BEGIN
           AND (
               o.subscription_status = 'active'
               OR (o.subscription_status = 'trialing' AND (o.trial_ends_at IS NULL OR o.trial_ends_at > NOW()))
-              OR o.plan IN ('pro', 'enterprise')
           )
     ) INTO v_has_active_license;
 

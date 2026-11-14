@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
+import AVVModal from '@/components/AVVModal';
 
 interface LicenseModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export default function LicenseModal({ isOpen, onClose, onOpenTeamModal }: Licen
   const [teamNameInput, setTeamNameInput] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isAvvOpen, setIsAvvOpen] = useState(false);
 
   // Trial code state
   const [showCodeInput, setShowCodeInput] = useState(false);
@@ -236,7 +238,16 @@ Mit freundlichen Grüßen,
                 </div>
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>DSGVO-Auftragsverarbeitung (AVV nach Art. 28) & § 35 SGB I</span>
+                  <span>
+                    DSGVO-Auftragsverarbeitung & § 35 SGB I{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsAvvOpen(true)}
+                      className="text-emerald-300 underline hover:text-white ml-1 font-semibold cursor-pointer"
+                    >
+                      (AVV-Muster)
+                    </button>
+                  </span>
                 </div>
               </div>
             </div>
@@ -307,8 +318,18 @@ Mit freundlichen Grüßen,
                 )}
               </button>
 
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                <div className="flex items-center justify-between text-slate-300 font-semibold text-[10px] sm:text-[11px]">
+                  <span>89,00 € zzgl. 19 % USt. (105,91 € brutto)</span>
+                  <span className="text-emerald-400">Monatlich kündbar</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  ⚖️ <strong>B2B-Angebot:</strong> Vertragsschluss ausschließlich für Träger, juristische Personen, Behörden und Fachkräfte (§ 14 BGB). Gemäß § 312g Abs. 1 BGB besteht kein Widerrufsrecht für gewerbliche Kunden.
+                </p>
+              </div>
+
               <p className="text-[10px] text-slate-400 text-center">
-                🔒 Verschlüsselte Stripe-Zahlung • Automatische Rechnung mit MwSt.-Ausweis • Jederzeit zum Monatsende kündbar
+                🔒 Verschlüsselte Stripe-Zahlung • SEPA-Lastschrift & Kreditkarte • Rechnungen nach § 14 UStG mit USt-Ausweis
               </p>
             </div>
 
@@ -438,6 +459,11 @@ Mit freundlichen Grüßen,
         </div>
 
       </div>
+
+      <AVVModal
+        isOpen={isAvvOpen}
+        onClose={() => setIsAvvOpen(false)}
+      />
     </div>
   );
 }

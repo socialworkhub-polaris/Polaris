@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
+import AVVModal from '@/components/AVVModal';
 
 interface TeamFeatureShowcaseModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
   const [activeTab, setActiveTab] = useState<'bulletin' | 'notes' | 'triage' | 'calendar'>(initialTab);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isAvvOpen, setIsAvvOpen] = useState(false);
 
   // Sync initial tab when opened
   useEffect(() => {
@@ -492,7 +494,16 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
                   </li>
                   <li className="flex items-center gap-2 text-slate-300">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>DSGVO-AVV Vertrag nach § 35 SGB I (Hosting in DE)</span>
+                    <span>
+                      DSGVO-AVV Vertrag nach § 35 SGB I (Hosting in DE){' '}
+                      <button
+                        type="button"
+                        onClick={() => setIsAvvOpen(true)}
+                        className="text-emerald-400 underline hover:text-white font-medium cursor-pointer"
+                      >
+                        (Muster ansehen)
+                      </button>
+                    </span>
                   </li>
                 </ul>
 
@@ -542,6 +553,17 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
               </div>
             </div>
 
+            {/* Legal B2B & Tax Transparency */}
+            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <div className="flex items-center justify-between text-slate-300 font-semibold text-[10px] sm:text-[11px]">
+                <span>89,00 € zzgl. 19 % USt. (105,91 € brutto)</span>
+                <span className="text-emerald-400 font-bold">Monatlich kündbar</span>
+              </div>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                ⚖️ <strong>B2B-Angebot:</strong> Vertragsschluss ausschließlich für Träger, juristische Personen, Behörden und Fachkräfte (§ 14 BGB). Gemäß § 312g Abs. 1 BGB besteht kein Widerrufsrecht für gewerbliche Kunden.
+              </p>
+            </div>
+
             {/* Sub-actions / Team join helper */}
             <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-slate-400">
               <button
@@ -583,6 +605,11 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
         </div>
 
       </div>
+
+      <AVVModal
+        isOpen={isAvvOpen}
+        onClose={() => setIsAvvOpen(false)}
+      />
     </div>
   );
 };

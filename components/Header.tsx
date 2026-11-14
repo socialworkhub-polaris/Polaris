@@ -56,8 +56,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isTeamActive = !!currentOrganization && (
     currentOrganization.subscriptionStatus === 'active' ||
-    currentOrganization.subscriptionStatus === 'trialing' ||
-    currentOrganization.plan === 'pro'
+    (currentOrganization.subscriptionStatus === 'trialing' &&
+      (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date()))
   );
 
   useEffect(() => {

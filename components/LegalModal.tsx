@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { X, ShieldCheck, FileText, AlertTriangle, ExternalLink } from 'lucide-react';
+import AVVModal from '@/components/AVVModal';
 
 interface LegalModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   defaultTab = 'dsgvo',
 }) => {
   const [activeTab, setActiveTab] = useState<'dsgvo' | 'disclaimer' | 'impressum'>(defaultTab);
+  const [isAvvOpen, setIsAvvOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -161,8 +163,8 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-3 text-[11px]">
+        <div className="p-3.5 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-3 text-[11px]">
             <Link
               href="/datenschutz"
               target="_blank"
@@ -171,6 +173,14 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               Vollständige Datenschutzerklärung
               <ExternalLink className="w-3 h-3" />
             </Link>
+            <span className="text-slate-300">·</span>
+            <button
+              type="button"
+              onClick={() => setIsAvvOpen(true)}
+              className="text-emerald-700 hover:underline font-bold cursor-pointer"
+            >
+              AVV-Mustervertrag (Art. 28 DSGVO)
+            </button>
             <span className="text-slate-300">·</span>
             <Link
               href="/impressum"
@@ -190,6 +200,11 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         </div>
 
       </div>
+
+      <AVVModal
+        isOpen={isAvvOpen}
+        onClose={() => setIsAvvOpen(false)}
+      />
     </div>
   );
 };

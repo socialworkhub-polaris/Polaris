@@ -248,8 +248,8 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
 
   const isTeamActive = !!currentOrganization && (
     currentOrganization.subscriptionStatus === 'active' ||
-    currentOrganization.subscriptionStatus === 'trialing' ||
-    currentOrganization.plan === 'pro'
+    (currentOrganization.subscriptionStatus === 'trialing' &&
+      (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date()))
   );
 
   // If no team selected or team subscription is inactive, show the showcase modal
