@@ -473,6 +473,10 @@ const handlePrint = () => {
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                     <span>100% DSGVO-konform (Zero-PII)</span>
                   </span>
+                  <span className="text-[11px] text-indigo-200 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Mistral AI (EU-Hosting)</span>
+                  </span>
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
                   KI-gestützte Fall-Triage & Clearing in Sekunden
@@ -943,6 +947,13 @@ const handlePrint = () => {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="w-full text-sm px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-none"
                 />
+                <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-500">
+                  <span className="flex items-center gap-1.5 text-slate-600">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Powered by <strong>Mistral AI</strong> (EU-Server, Paris) • 100% DSGVO- &amp; § 35 SGB I-konform</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Zero-Data-Retention (kein Modell-Training)</span>
+                </div>
               </div>
 
               {error && (
