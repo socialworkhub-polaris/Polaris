@@ -89,7 +89,7 @@ export default function DatenschutzPage() {
             <p className="font-semibold text-slate-800">Maximilian Breith</p>
             <p className="text-slate-600">Hauptstraße 8, 66953 Pirmasens, Deutschland</p>
             <p className="text-slate-600">Telefon: +49 155 6767 8327</p>
-            <p>E-Mail: <a href="mailto:socialworkhub@proton.me" className="text-blue-600 underline">socialworkhub@proton.me</a></p>
+            <p>E-Mail: <a href="mailto:kontakt@socialworkhub.net" className="text-blue-600 underline">kontakt@socialworkhub.net</a> (alternativ: <a href="mailto:socialworkhub@proton.me" className="text-slate-600 underline">socialworkhub@proton.me</a>)</p>
             <p>Webseite: <a href="https://polaris-socialworkhub.net" className="text-blue-600 underline">https://polaris-socialworkhub.net</a></p>
             <p className="text-slate-500 pt-1">
               (Vollständige Angaben gemäß § 5 DDG siehe <Link href="/impressum" className="text-blue-600 underline">Impressum</Link>)
@@ -195,15 +195,27 @@ export default function DatenschutzPage() {
             </p>
             <div className="grid sm:grid-cols-2 gap-3 pt-1">
               <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-xs">
+                <h4 className="font-bold text-slate-900 mb-1">Mistral AI (Europäische KI-Inferenz)</h4>
+                <p className="text-slate-600">
+                  Mistral AI SAS (Paris, Frankreich). Die Inferenz (Triage-Empfehlungen und Übersetzungen) erfolgt ausschließlich auf Rechenzentren in der Europäischen Union. Es gilt eine strikte Zero-Data-Retention-Garantie: Eingaben werden nicht protokolliert oder für Modelltrainings verwendet.
+                </p>
+              </div>
+              <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-xs">
                 <h4 className="font-bold text-slate-900 mb-1">Supabase (Authentifizierung &amp; Stammdaten)</h4>
                 <p className="text-slate-600">
                   Supabase Inc. verwaltet Benutzer-IDs und Einrichtungs-Stammdaten. Die Datenbank wird in ISO-27001-zertifizierten Rechenzentren innerhalb der Europäischen Union (Region Frankfurt am Main, Deutschland) gehostet.
                 </p>
               </div>
               <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-xs">
-                <h4 className="font-bold text-slate-900 mb-1">Webhosting &amp; Content Delivery Network (CDN)</h4>
+                <h4 className="font-bold text-slate-900 mb-1">Webhosting &amp; Serverless Functions</h4>
                 <p className="text-slate-600">
-                  Die Webanwendung wird über moderne Cloud-Infrastrukturen mit SSL/TLS-Ende-zu-Ende-Verschlüsselung ausgeliefert. Server-Logfiles werden ausschließlich zur Gefahrenabwehr und Fehleranalyse kurzzeitig gespeichert.
+                  Die Webanwendung wird über moderne europäische Cloud-Infrastrukturen (Vercel EU Region) mit SSL/TLS-Ende-zu-Ende-Verschlüsselung ausgeliefert. Server-Logfiles werden ausschließlich zur Gefahrenabwehr kurzzeitig gespeichert.
+                </p>
+              </div>
+              <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-xs">
+                <h4 className="font-bold text-slate-900 mb-1">Vektorkarten (Protomaps PMTiles)</h4>
+                <p className="text-slate-600">
+                  Die interaktive Berlin-Karte läuft vollständig eigengehostet über Cloudflare R2 mit EU Data Boundary. Zu keinem Zeitpunkt werden Anfragen an Drittanbieter-Kartendienste (wie Google Maps oder Mapbox) weitergeleitet.
                 </p>
               </div>
             </div>

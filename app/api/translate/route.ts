@@ -33,9 +33,9 @@ export async function POST(req: Request) {
     }
 
     const langLabel = LANGUAGE_NAMES[targetLanguage] || targetLanguage;
-    const apiKey = process.env.AI_API_KEY;
-    const baseURL = process.env.AI_BASE_URL || 'https://api.deepseek.com';
-    const model = process.env.AI_MODEL || 'deepseek-chat';
+    const apiKey = process.env.MISTRAL_API_KEY || process.env.AI_API_KEY;
+    const baseURL = process.env.AI_BASE_URL || 'https://api.mistral.ai/v1';
+    const model = process.env.AI_MODEL || 'mistral-small-latest';
 
     if (!apiKey || apiKey.includes('hier-deinen-echten')) {
       return NextResponse.json({ error: 'KI-Übersetzung nicht konfiguriert.' }, { status: 500 });

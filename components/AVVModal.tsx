@@ -137,12 +137,14 @@ Mit freundlichen Grüßen,
           {/* Section 4: Unterauftragsverarbeiter */}
           <div className="space-y-2">
             <h3 className="font-bold text-white text-sm uppercase tracking-wider text-slate-200">
-              4. Genehmigte Unterauftragnehmer
+              4. Genehmigte Unterauftragnehmer (Ausschließlich EU-Standorte)
             </h3>
-            <ul className="space-y-1 text-xs text-slate-400 list-disc list-inside">
-              <li><strong>Supabase Inc. / AWS Europe:</strong> Datenbankhosting (Standort Frankfurt am Main, Deutschland).</li>
-              <li><strong>Stripe Payments Europe Ltd.:</strong> Zahlungsabwicklung & SEPA-Mandate (Irland / EU).</li>
-              <li><strong>Vercel Inc.:</strong> Hosting der Webapplikation (EU Region).</li>
+            <ul className="space-y-1.5 text-xs text-slate-400 list-disc list-inside">
+              <li><strong>Mistral AI SAS:</strong> Europäische KI-Modell-Inferenz (Sitz: Paris, Frankreich; Rechenzentren innerhalb der Europäischen Union). Reine flüchtige Verarbeitung ohne Speicherung oder Training mit Kundendaten (Zero-Data-Retention-Garantie).</li>
+              <li><strong>Supabase Inc. / AWS Europe:</strong> Verschlüsseltes PostgreSQL-Datenbankhosting & Row-Level-Security (Standort: Frankfurt am Main, Deutschland / EU).</li>
+              <li><strong>Cloudflare Inc. (EU Data Boundary):</strong> 100% datenschutzkonforme Vektorkartenkacheln (Protomaps PMTiles) ohne Tracking oder Drittanbieter-Cookies.</li>
+              <li><strong>Stripe Payments Europe Ltd.:</strong> DSGVO-zertifizierte B2B-Zahlungsabwicklung & SEPA-Mandate (Irland / EU).</li>
+              <li><strong>Vercel Inc.:</strong> Hosting der Webapplikation (Serverless Functions Region Frankfurt/EU).</li>
             </ul>
           </div>
 

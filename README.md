@@ -11,7 +11,7 @@ Polaris assists social workers and frontline practitioners in navigating Berlin'
 
 * **Socio-Legal Triage Wizard (`/api/triage`):**
   * **0-Token Deterministic Safeguards:** Hard-coded statutory filters preventing routing errors (e.g., minors $<18$ locked to SGB VIII and blocked from adult homeless shelters; strict municipal jurisdiction matching).
-  * **AI Stufenplan Generation (DeepSeek):** Generates structured 2–3 phase emergency roadmaps (`sofort`, `behoerde`, `beratung`) citing German statutory laws (§ 8a SGB VIII, § 36 SGB XII, ASOG Berlin) with required documents checklists.
+  * **AI Stufenplan Generation (Mistral AI EU):** Generates structured 2–3 phase emergency roadmaps (`sofort`, `behoerde`, `beratung`) citing German statutory laws (§ 8a SGB VIII, § 36 SGB XII, ASOG Berlin) with required documents checklists. 100% EU-hosted & DSGVO / § 35 SGB I compliant.
 * **1-Click Multi-Language Translation (`/api/translate`):**
   * Translates the client action plan and required document checklist into **Ukrainian (🇺🇦), English (🇬🇧), Polish (🇵🇱), Arabic (🇸🇾), and Russian (🇷🇺)** for non-German speaking clients.
 * **High-Performance Database (Supabase PostgreSQL):**
@@ -32,7 +32,7 @@ Polaris assists social workers and frontline practitioners in navigating Berlin'
 * **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 * **Database:** [Supabase](https://supabase.com/) (PostgreSQL with Row Level Security)
 * **Mapping:** [Leaflet](https://leafletjs.com/), [React-Leaflet](https://react-leaflet.js.org/) & [Protomaps PMTiles](https://protomaps.com/) (100% DSGVO / § 35 SGB I konform, Self-Hosted Vector Tiles & LOR-Zuständigkeitsgrenzen)
-* **AI & Search:** DeepSeek API & Exa Neural Search
+* **AI & Search:** Mistral AI (EU-hosted `mistral-small-latest` via Paris data centers) & Exa Neural Search
 * **Icons:** [Lucide React](https://lucide.dev/)
 
 ---
@@ -57,10 +57,10 @@ Create a `.env.local` file in the root directory:
 NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 
-# AI & Search
-AI_API_KEY=<your-deepseek-api-key>
-AI_BASE_URL=https://api.deepseek.com
-AI_MODEL=deepseek-chat
+# AI & Search (100% EU Data Residency)
+MISTRAL_API_KEY=<your-mistral-api-key>
+AI_BASE_URL=https://api.mistral.ai/v1
+AI_MODEL=mistral-small-latest
 EXA_API_KEY=<your-exa-api-key>
 ```
 

@@ -66,11 +66,18 @@ export default function ImpressumPage() {
             </p>
             <p className="flex items-center gap-2 text-slate-700">
               <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>E-Mail: <a href="mailto:socialworkhub@proton.me" className="text-blue-600 font-medium hover:underline">socialworkhub@proton.me</a></span>
+              <span>E-Mail: <a href="mailto:kontakt@socialworkhub.net" className="text-blue-600 font-medium hover:underline">kontakt@socialworkhub.net</a> (alternativ: <a href="mailto:socialworkhub@proton.me" className="text-slate-600 hover:underline">socialworkhub@proton.me</a>)</span>
             </p>
             <p className="flex items-center gap-2 text-slate-700">
               <Globe className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <span>Internet: <a href="https://polaris-socialworkhub.net" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://polaris-socialworkhub.net</a></span>
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 space-y-1">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Steuerliche Angaben</h3>
+            <p className="text-slate-700">
+              Steuernummer / USt-IdNr.: In behördlicher Erteilung beim zuständigen Finanzamt (Gewerbeanmeldung anhängig; wird nach Zuteilung unverzüglich nachgetragen gemäß § 5 DDG).
             </p>
           </div>
 

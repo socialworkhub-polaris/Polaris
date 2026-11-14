@@ -1,10 +1,8 @@
 /**
- * Isolated Vercel AI Gateway & LLM Orchestrator for Polaris
+ * Isolated AI Gateway & LLM Orchestrator for Polaris
  *
- * Provides a resilient, unified interface for LLM completions.
- * Seamlessly routes between:
- *  1. Vercel AI Gateway (via VERCEL_AI_GATEWAY_URL or AI_GATEWAY_URL)
- *  2. Direct OpenAI-compatible providers (DeepSeek, OpenAI, Groq, etc.)
+ * Primary Provider: Mistral AI (100% EU-Hosted & DSGVO / § 35 SGB I Compliant, Paris/France)
+ * Resilient fallback chain and Vercel AI Gateway support.
  *
  * Includes built-in timeout abort controllers, response sanitation, and fallback guarantees.
  */
@@ -27,12 +25,13 @@ export interface AIGatewayResult<T = any> {
   data?: T;
   rawText?: string;
   modelUsed: string;
-  provider: 'vercel-ai-gateway' | 'direct' | 'fallback';
+  provider: 'mistral-eu' | 'vercel-ai-gateway' | 'direct' | 'fallback';
   error?: string;
 }
 
 /**
- * Resolves current AI configuration based on environment variables
+ * Resolves current AI configuration based on environment variables.
+ * Defaults to Mistral AI EU (https://api.mistral.ai/v1 with mistral-small-latest)
  */
 export function getAIConfig(override?: AIGatewayConfig): Required<AIGatewayConfig> {
   const isVercelGateway = Boolean(process.env.VERCEL_AI_GATEWAY_URL || process.env.AI_GATEWAY_URL);
@@ -42,17 +41,18 @@ export function getAIConfig(override?: AIGatewayConfig): Required<AIGatewayConfi
     process.env.VERCEL_AI_GATEWAY_URL ||
     process.env.AI_GATEWAY_URL ||
     process.env.AI_BASE_URL ||
-    'https://api.deepseek.com';
+    'https://api.mistral.ai/v1';
 
   const apiKey =
     override?.apiKey ||
+    process.env.MISTRAL_API_KEY ||
     process.env.AI_API_KEY ||
     '';
 
   const model =
     override?.model ||
     process.env.AI_MODEL ||
-    'deepseek-chat';
+    'mistral-small-latest';
 
   const timeoutMs = override?.timeoutMs || 25000;
 
@@ -136,12 +136,18 @@ export async function executeStructuredPrompt<T = any>(
 
     clearTimeout(timeoutId);
 
+    const resolvedProvider = isVercelGateway
+      ? 'vercel-ai-gateway'
+      : config.baseUrl.includes('mistral.ai')
+      ? 'mistral-eu'
+      : 'direct';
+
     if (!response.ok) {
       const errText = await response.text();
       return {
         success: false,
         modelUsed: config.model,
-        provider: isVercelGateway ? 'vercel-ai-gateway' : 'direct',
+        provider: resolvedProvider,
         error: `HTTP ${response.status}: ${errText.slice(0, 300)}`,
       };
     }
@@ -156,7 +162,7 @@ export async function executeStructuredPrompt<T = any>(
       data: parsed,
       rawText: rawContent,
       modelUsed: config.model,
-      provider: isVercelGateway ? 'vercel-ai-gateway' : 'direct',
+      provider: resolvedProvider,
     };
   } catch (err: any) {
     clearTimeout(timeoutId);
