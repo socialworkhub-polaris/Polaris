@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   ClipboardList,
@@ -124,14 +124,26 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
   const {
     currentOrganization,
     announcements = [],
+    loadAnnouncements,
     createAnnouncement,
     deleteAnnouncement,
     togglePinAnnouncement,
     allTeamFacilityNotes = [],
+    loadAllTeamFacilityNotes,
     calendarEvents = [],
+    loadCalendarEvents,
     createCalendarEvent,
     deleteCalendarEvent,
   } = useTeam();
+
+  // Re-sync team board data whenever the modal opens
+  useEffect(() => {
+    if (isOpen && currentOrganization) {
+      loadAnnouncements();
+      loadAllTeamFacilityNotes();
+      loadCalendarEvents();
+    }
+  }, [isOpen, currentOrganization, loadAnnouncements, loadAllTeamFacilityNotes, loadCalendarEvents]);
 
   const [activeTab, setActiveTab] = useState<'pinnwand' | 'ticker' | 'calendar'>('pinnwand');
 

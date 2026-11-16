@@ -9,10 +9,13 @@
     "lint": "next lint",
     "ingest": "tsx scripts/run-ingestion.ts",
     "ingest:sync": "tsx scripts/run-ingestion.ts --sync",
-    "tiles:extract": "node scripts/extract-tiles.js"
+    "tiles:extract": "node scripts/extract-tiles.js",
+    "email:test": "tsx --env-file=.env.local scripts/test-email.ts"
   },
   "dependencies": {
     "@notionhq/client": "^5.26.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.3.1",
     "@supabase/supabase-js": "^2.119.0",
     "@types/leaflet.markercluster": "^1.5.6",
     "cheerio": "^1.2.0",

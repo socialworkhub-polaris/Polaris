@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Facility } from '@/types/facility';
 import { FacilityCard } from './FacilityCard';
+import { NewsletterCard } from './NewsletterCard';
 import { SearchX, ArrowUpDown, Filter, ChevronDown, ChevronUp, Globe, ExternalLink, Loader2, Bookmark } from 'lucide-react';
 
 interface ExaResult {
@@ -265,6 +266,11 @@ export const FacilityList: React.FC<FacilityListProps> = ({
             />
           ))
         )}
+
+        {/* Newsletter Card am Ende der Einrichtungsliste */}
+        <div className="pt-4 pb-8">
+          <NewsletterCard />
+        </div>
       </div>
     </div>
   );

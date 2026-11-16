@@ -21,6 +21,7 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Info,
+  Mail,
 } from 'lucide-react';
 import { useTeam } from '@/lib/TeamContext';
 import { useAuth } from '@/lib/AuthContext';
@@ -51,6 +52,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
     updateSeats,
     openBillingPortal,
     startStripeCheckout,
+    inviteMemberByEmail,
   } = useTeam();
   const [billingLoading, setBillingLoading] = useState(false);
   const [seatLoading, setSeatLoading] = useState(false);
@@ -65,6 +67,13 @@ export const TeamModal: React.FC<TeamModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Email invitation state
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRecipientName, setInviteRecipientName] = useState('');
+  const [sendingEmailInvite, setSendingEmailInvite] = useState(false);
+  const [emailInviteSuccess, setEmailInviteSuccess] = useState<string | null>(null);
+  const [emailInviteError, setEmailInviteError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -99,6 +108,31 @@ export const TeamModal: React.FC<TeamModalProps> = ({
     if (!currentOrganization) return;
     const msg = `Hallo Team! Hier ist der Einladungslink für unseren Team-Space "${currentOrganization.name}" in Polaris:\n\n${joinLink}\n\nTeam-Code: ${currentOrganization.inviteCode}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleSendEmailInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentOrganization || !inviteEmail.trim()) return;
+
+    setSendingEmailInvite(true);
+    setEmailInviteError(null);
+    setEmailInviteSuccess(null);
+
+    try {
+      const msg = await inviteMemberByEmail(
+        currentOrganization.id,
+        inviteEmail.trim(),
+        inviteRecipientName.trim() || undefined
+      );
+      setEmailInviteSuccess(msg);
+      setInviteEmail('');
+      setInviteRecipientName('');
+      setTimeout(() => setEmailInviteSuccess(null), 5000);
+    } catch (err: any) {
+      setEmailInviteError(err.message || 'Fehler beim Versenden der Einladung.');
+    } finally {
+      setSendingEmailInvite(false);
+    }
   };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
@@ -619,6 +653,59 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                 <Share2 className="w-4 h-4" />
                 <span>In Team-Chat (WhatsApp / Signal) teilen</span>
               </button>
+
+              {/* Direct Email Invite via Brevo */}
+              <form onSubmit={handleSendEmailInvite} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 pt-3.5">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-bold text-slate-900">Per E-Mail einladen</span>
+                  <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Offiziell</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Senden Sie Kolleg*innen eine offizielle Einladung mit Team-Code und direktem Beitritts-Link.
+                </p>
+
+                {emailInviteSuccess && (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{emailInviteSuccess}</span>
+                  </div>
+                )}
+
+                {emailInviteError && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-800 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{emailInviteError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <input
+                    type="email"
+                    required
+                    placeholder="E-Mail-Adresse der Kollegin / des Kollegen"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Name der Fachkraft (optional)"
+                    value={inviteRecipientName}
+                    onChange={(e) => setInviteRecipientName(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={sendingEmailInvite || !inviteEmail.trim()}
+                  className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                >
+                  {sendingEmailInvite ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                  <span>{sendingEmailInvite ? 'Wird versendet...' : 'Offizielle Einladung senden'}</span>
+                </button>
+              </form>
             </div>
           )}
 

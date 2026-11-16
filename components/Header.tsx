@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare, ClipboardList } from 'lucide-react';
+import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare, ClipboardList, Mail } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
 import TeamSelectorDropdown from '@/components/TeamSelectorDropdown';
 import { TeamModal } from '@/components/TeamModal';
 import { LegalModal } from '@/components/LegalModal';
 import LicenseModal from '@/components/LicenseModal';
 import FeedbackModal from '@/components/FeedbackModal';
+import { NewsletterModal } from '@/components/NewsletterModal';
 import TeamFeatureShowcaseModal from '@/components/TeamFeatureShowcaseModal';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTeam } from '@/lib/TeamContext';
@@ -46,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isShowcaseOpen, setIsShowcaseOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
@@ -64,14 +66,17 @@ export const Header: React.FC<HeaderProps> = ({
     const handleOpenShowcase = () => setIsShowcaseOpen(true);
     const handleOpenLicense = () => setIsLicenseOpen(true);
     const handleOpenTeam = () => setIsTeamModalOpen(true);
+    const handleOpenNewsletter = () => setIsNewsletterOpen(true);
 
     window.addEventListener('polaris:open-team-showcase', handleOpenShowcase);
     window.addEventListener('polaris:open-license', handleOpenLicense);
     window.addEventListener('polaris:open-team', handleOpenTeam);
+    window.addEventListener('polaris:open-newsletter', handleOpenNewsletter);
     return () => {
       window.removeEventListener('polaris:open-team-showcase', handleOpenShowcase);
       window.removeEventListener('polaris:open-license', handleOpenLicense);
       window.removeEventListener('polaris:open-team', handleOpenTeam);
+      window.removeEventListener('polaris:open-newsletter', handleOpenNewsletter);
     };
   }, []);
 
@@ -169,6 +174,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
                 <span className="hidden md:inline">{t.giveFeedback}</span>
               </button>
+
+              {/* Newsletter Button */}
+              <button
+                type="button"
+                onClick={() => setIsNewsletterOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs"
+                title="Newsletter für Soziale Arbeit abonnieren"
+              >
+                <Mail className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden md:inline">{t.newsletter}</span>
+              </button>
             </div>
 
           </div>
@@ -257,6 +273,11 @@ export const Header: React.FC<HeaderProps> = ({
       <FeedbackModal
         isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}
+      />
+
+      <NewsletterModal
+        isOpen={isNewsletterOpen}
+        onClose={() => setIsNewsletterOpen(false)}
       />
 
       <TeamModal

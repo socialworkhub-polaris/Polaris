@@ -46,8 +46,9 @@ export const translations = {
     copyInfo: 'Info kopieren',
     reportCorrection: 'Korrektur melden',
     
-    // Feedback
+    // Feedback & Newsletter
     giveFeedback: 'Feedback geben',
+    newsletter: 'Newsletter',
   },
   en: {
     // Header
@@ -90,8 +91,9 @@ export const translations = {
     copyInfo: 'Copy Details',
     reportCorrection: 'Report Correction',
     
-    // Feedback
+    // Feedback & Newsletter
     giveFeedback: 'Send Feedback',
+    newsletter: 'Newsletter',
   },
 };
 

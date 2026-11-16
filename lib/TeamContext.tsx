@@ -47,6 +47,7 @@ interface TeamContextType {
   updateSeats: (orgId: string, targetSeats: number) => Promise<void>;
   redeemTrialCode: (orgId: string, code: string) => Promise<{ success: boolean; message: string }>;
   updateMemberRole: (orgId: string, memberUserId: string, newRole: 'admin' | 'member') => Promise<void>;
+  inviteMemberByEmail: (orgId: string, email: string, recipientName?: string) => Promise<string>;
   refreshOrganizations: () => Promise<void>;
 }
 
@@ -62,6 +63,7 @@ const TeamContext = createContext<TeamContextType>({
   loadMembers: async () => {},
   removeMember: async () => {},
   updateMemberRole: async () => {},
+  inviteMemberByEmail: async () => '',
   notesCountByFacility: {},
   fetchNotesForFacility: async () => [],
   addNoteForFacility: async () => { throw new Error('Not initialized'); },
@@ -480,13 +482,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) throw new Error(error.message);
 
-    // Increment notes count
-    setNotesCountByFacility((prev) => ({
-      ...prev,
-      [facilityId]: (prev[facilityId] || 0) + 1,
-    }));
-
-    return {
+    const created: FacilityTeamNote = {
       id: data.id,
       facilityId: data.facility_id,
       organizationId: data.organization_id,
@@ -498,6 +494,17 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
+
+    // Increment notes count
+    setNotesCountByFacility((prev) => ({
+      ...prev,
+      [facilityId]: (prev[facilityId] || 0) + 1,
+    }));
+
+    // Update in-memory allTeamFacilityNotes so Schwarzes Brett / Ticker has it immediately
+    setAllTeamFacilityNotes((prev) => [created, ...prev]);
+
+    return created;
   };
 
   // 10. Delete Note
@@ -512,6 +519,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) throw new Error(error.message);
 
+    setAllTeamFacilityNotes((prev) => prev.filter((n) => n.id !== noteId));
     refreshTeamNotesCount();
   };
 
@@ -526,6 +534,12 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .eq('organization_id', currentOrganization.id);
 
     if (error) throw new Error(error.message);
+
+    setAllTeamFacilityNotes((prev) =>
+      prev
+        .map((n) => (n.id === noteId ? { ...n, isPinned: !currentPin } : n))
+        .sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
+    );
   };
 
 
@@ -932,6 +946,25 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await loadUserOrganizations();
   };
 
+  const inviteMemberByEmail = async (orgId: string, email: string, recipientName?: string): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Nicht angemeldet.');
+
+    const res = await fetch('/api/team/invite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ organizationId: orgId, email, recipientName }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Fehler beim Versenden der Einladung.');
+    return data.message || 'Einladung erfolgreich versendet.';
+  };
+
   return (
     <TeamContext.Provider
       value={{
@@ -946,6 +979,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadMembers,
         removeMember,
         updateMemberRole,
+        inviteMemberByEmail,
         notesCountByFacility,
         fetchNotesForFacility,
         addNoteForFacility,
