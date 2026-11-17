@@ -191,7 +191,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-2xl lg:max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-900 text-white">
           <div className="flex items-center space-x-3">
@@ -216,7 +216,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-2 gap-2 text-xs font-semibold text-slate-600 overflow-x-auto">
+        <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-2 gap-2 text-xs font-semibold text-slate-600 overflow-x-auto sm:overflow-visible">
           <button
             onClick={() => { setTab('overview'); setErrorMsg(null); }}
             className={`pb-2.5 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
@@ -324,12 +324,22 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                         }`}
                       >
                         <div>
-                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                            <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                             <span>{org.name}</span>
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200">
                               {org.inviteCode}
                             </span>
+                            {org.subscriptionStatus === 'active' && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Lizenz aktiv
+                              </span>
+                            )}
+                            {org.subscriptionStatus === 'trialing' && (!org.trialEndsAt || new Date(org.trialEndsAt) > new Date()) && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                Testphase
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] text-slate-500 mt-0.5">
                             Deine Rolle: <span className="font-semibold text-slate-700 capitalize">{isAdmin ? 'Team-Admin' : 'Mitglied'}</span>
@@ -507,83 +517,146 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                   </div>
                 </div>
 
-                {/* Team Billing & License Card for Admins */}
-                {currentOrganization.role === 'admin' && (
-                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-900 text-slate-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-emerald-400" />
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">
-                          Abrechnung & Lizenzstatus
+                {/* Team Billing & License Card */}
+                {(() => {
+                  const isSubActive = currentOrganization.subscriptionStatus === 'active';
+                  const isTrialActive = currentOrganization.subscriptionStatus === 'trialing' &&
+                    (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date());
+
+                  if (currentOrganization.role === 'admin') {
+                    return (
+                      <div className="border border-slate-200 rounded-xl p-4 bg-slate-900 text-slate-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs font-bold text-white uppercase tracking-wider">
+                              Abrechnung & Lizenzstatus
+                            </span>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isSubActive
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : isTrialActive
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          }`}>
+                            {isSubActive
+                              ? currentOrganization.stripeCustomerId ? '● Team-Lizenz Aktiv' : '● Träger-Lizenz Aktiv'
+                              : isTrialActive
+                              ? '● 14-Tage Testphase'
+                              : '○ Inaktiv'}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          {isSubActive
+                            ? currentOrganization.stripeCustomerId
+                              ? 'Dein Team nutzt die volle Polaris Team-Lizenz mit unbegrenzten KI-Triagen und geteiltem Wissen.'
+                              : 'Dein Team nutzt die volle Polaris Team-Lizenz. Die Abrechnung erfolgt zentral über Trägervertrag / Rechnung.'
+                            : isTrialActive
+                            ? `Dein Team befindet sich in der kostenlosen 14-Tage Testphase${currentOrganization.trialEndsAt ? ` (aktiv bis ${new Date(currentOrganization.trialEndsAt).toLocaleDateString('de-DE')})` : ''}. Alle Team-Funktionen sind freigeschaltet.`
+                            : 'Aktiviere die Team-Lizenz für unbegrenzte KI-Triagen und geteiltes Wissen für das gesamte Team.'}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {isSubActive ? (
+                            currentOrganization.stripeCustomerId ? (
+                              <button
+                                type="button"
+                                disabled={billingLoading}
+                                onClick={async () => {
+                                  setBillingLoading(true);
+                                  setErrorMsg(null);
+                                  try {
+                                    await openBillingPortal(currentOrganization.id);
+                                  } catch (err: any) {
+                                    setErrorMsg(err.message || 'Fehler beim Öffnen des Stripe Portals.');
+                                  } finally {
+                                    setBillingLoading(false);
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {billingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5 text-blue-400" />}
+                                <span>Rechnungen & Zahlungsart (Stripe)</span>
+                                <ArrowUpRight className="w-3 h-3 text-slate-400" />
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-2 text-xs text-emerald-300 bg-emerald-950/60 border border-emerald-700/50 px-3 py-1.5 rounded-lg font-medium">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                <span>Vollversion aktiv (Zentraler Trägervertrag)</span>
+                              </div>
+                            )
+                          ) : isTrialActive ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={billingLoading}
+                                onClick={async () => {
+                                  setBillingLoading(true);
+                                  setErrorMsg(null);
+                                  try {
+                                    await startStripeCheckout(currentOrganization.id);
+                                  } catch (err: any) {
+                                    setErrorMsg(err.message || 'Fehler beim Starten des Checkouts.');
+                                  } finally {
+                                    setBillingLoading(false);
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {billingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+                                <span>Jetzt reguläre Team-Lizenz aktivieren (89 € / Monat)</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={billingLoading}
+                              onClick={async () => {
+                                setBillingLoading(true);
+                                setErrorMsg(null);
+                                try {
+                                  await startStripeCheckout(currentOrganization.id);
+                                } catch (err: any) {
+                                  setErrorMsg(err.message || 'Fehler beim Starten des Checkouts.');
+                                } finally {
+                                  setBillingLoading(false);
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {billingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+                              <span>Team-Lizenz aktivieren (89 € / Monat)</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex items-center justify-between text-xs text-slate-600">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-slate-500" />
+                          <span>Lizenzstatus deines Teams:</span>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isSubActive
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : isTrialActive
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {isSubActive
+                            ? '● Team-Lizenz Aktiv'
+                            : isTrialActive
+                            ? '● 14-Tage Testphase'
+                            : '○ Inaktiv'}
                         </span>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        currentOrganization.subscriptionStatus === 'active'
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : currentOrganization.subscriptionStatus === 'trialing' && (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date())
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
-                      }`}>
-                        {currentOrganization.subscriptionStatus === 'active'
-                          ? '● Team-Lizenz Aktiv'
-                          : currentOrganization.subscriptionStatus === 'trialing' && (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date())
-                          ? '● 14-Tage Testphase'
-                          : '○ Inaktiv'}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      {currentOrganization.subscriptionStatus === 'active'
-                        ? 'Dein Team nutzt die volle Polaris Team-Lizenz mit unbegrenzten KI-Triagen und geteiltem Wissen.'
-                        : 'Aktiviere die Team-Lizenz oder verwalte deine Rechnungsdaten und SEPA-Lastschriften.'}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      {currentOrganization.stripeCustomerId ? (
-                        <button
-                          type="button"
-                          disabled={billingLoading}
-                          onClick={async () => {
-                            setBillingLoading(true);
-                            setErrorMsg(null);
-                            try {
-                              await openBillingPortal(currentOrganization.id);
-                            } catch (err: any) {
-                              setErrorMsg(err.message || 'Fehler beim Öffnen des Stripe Portals.');
-                            } finally {
-                              setBillingLoading(false);
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                          {billingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5 text-blue-400" />}
-                          <span>Rechnungen & Zahlungsart (Stripe)</span>
-                          <ArrowUpRight className="w-3 h-3 text-slate-400" />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={billingLoading}
-                          onClick={async () => {
-                            setBillingLoading(true);
-                            setErrorMsg(null);
-                            try {
-                              await startStripeCheckout(currentOrganization.id);
-                            } catch (err: any) {
-                              setErrorMsg(err.message || 'Fehler beim Starten des Checkouts.');
-                            } finally {
-                              setBillingLoading(false);
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                          {billingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
-                          <span>Team-Lizenz aktivieren (89 € / Monat)</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
+                    );
+                  }
+                })()}
               </>
             )}
           </div>
