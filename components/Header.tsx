@@ -166,19 +166,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
-              {/* Lizenz erwerben Button: Nur anzeigen, wenn weder das Team noch der Nutzer bereits eine aktive Lizenz hat */}
-              {!isLicensed && (
-                <button
-                  type="button"
-                  onClick={() => setIsLicenseOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-emerald-300 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 rounded-lg transition-colors cursor-pointer text-xs font-medium shrink-0"
-                  title="Team-Lizenz für Träger & Einrichtungen"
-                >
-                  <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{t.getLicense}</span>
-                </button>
-              )}
-
               {/* Datenschutz & Impressum Button mit Outline */}
               <button
                 type="button"
@@ -301,6 +288,19 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Lizenz erwerben Button: An die rechte Seite der linken Gruppe gesetzt, damit beim Ausblenden nichts nach links rutscht */}
+              {!isLicensed && (
+                <button
+                  type="button"
+                  onClick={() => setIsLicenseOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-emerald-300 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 rounded-lg transition-colors cursor-pointer text-xs font-medium shrink-0"
+                  title="Team-Lizenz für Träger & Einrichtungen"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{t.getLicense}</span>
+                </button>
+              )}
             </div>
 
           </div>
