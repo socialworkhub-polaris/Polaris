@@ -16,6 +16,7 @@ import EmergencyBar from '@/components/EmergencyBar';
 import { TeamModal } from '@/components/TeamModal';
 import { TeamHubModal } from '@/components/TeamHubModal';
 import BillingSuccessModal from '@/components/BillingSuccessModal';
+import { JurisdictionFinderModal } from '@/components/JurisdictionFinderModal';
 
 const INITIAL_FILTERS: FilterState = {
   searchQuery: '',
@@ -46,6 +47,33 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState<string>('');
   const [isDeepLinkJoinOpen, setIsDeepLinkJoinOpen] = useState(false);
   const [isTeamHubOpen, setIsTeamHubOpen] = useState(false);
+  const [isJurisdictionOpen, setIsJurisdictionOpen] = useState(false);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+
+  const handleToggleNearby = () => {
+    if (userLocation) {
+      setUserLocation(null);
+      return;
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      alert('Standortbestimmung wird von deinem Browser nicht unterstützt.');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+      },
+      (err) => {
+        setIsLocating(false);
+        console.warn('GPS location error:', err);
+        alert('Standort konnte nicht ermittelt werden. Bitte prüfe deine Standorteinstellungen im Browser.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -225,6 +253,7 @@ export default function Home() {
         onRefresh={loadFacilities}
         onOpenTriage={() => setIsTriageOpen(true)}
         onOpenTeamHub={() => setIsTeamHubOpen(true)}
+        onOpenJurisdiction={() => setIsJurisdictionOpen(true)}
       />
 
      {/* Main Split-View Workspace */}
@@ -244,6 +273,9 @@ export default function Home() {
             totalResults={filteredFacilities.length}
             showOnlyBookmarks={showOnlyBookmarks}
             onToggleBookmarks={() => setShowOnlyBookmarks(!showOnlyBookmarks)}
+            userLocation={userLocation}
+            onToggleNearby={handleToggleNearby}
+            isLocating={isLocating}
           />
 
           {/* Card Stream */}
@@ -258,6 +290,8 @@ export default function Home() {
               searchQuery={filterState.searchQuery}
               totalCount={facilities.length}
               showOnlyBookmarks={showOnlyBookmarks}
+              userLocation={userLocation}
+              isKaeltehilfeActive={!!filterState.kaeltehilfeOnly}
             />
           </div>
         </div>
@@ -275,6 +309,7 @@ export default function Home() {
             onOpenDetails={handleOpenDetails}
             onOpenPrint={handleOpenPrint}
             selectedDistrict={filterState.district}
+            userLocation={userLocation}
             onSelectDistrict={(district: BerlinDistrict) =>
               setFilterState((prev) => ({
                 ...prev,
@@ -333,6 +368,7 @@ export default function Home() {
       <TriageModal
         isOpen={isTriageOpen}
         onClose={() => setIsTriageOpen(false)}
+        facilities={facilities}
       />
 
       {/* Deep-link Team Join Modal */}
@@ -344,6 +380,12 @@ export default function Home() {
 
       {/* Post-Checkout Billing Success Modal */}
       <BillingSuccessModal />
+
+      {/* LOR Amts- und Behördenfinder Modal */}
+      <JurisdictionFinderModal
+        isOpen={isJurisdictionOpen}
+        onClose={() => setIsJurisdictionOpen(false)}
+      />
 
       {/* Team-Zentrale / Schwarzes Brett Modal */}
       {isTeamHubOpen && (

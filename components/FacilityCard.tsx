@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Building2,
   HeartHandshake,
@@ -15,10 +15,16 @@ import {
   Check,
   Bookmark,
   Users,
+  Navigation,
+  Snowflake,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
 import { useBookmarks } from '../lib/useBookmarks';
 import { useTeam } from '../lib/TeamContext';
+import { getBVGRouteUrl, formatDistance } from '@/lib/geolocation';
+import { getAdmissionStatus, getActiveNightWarning } from '@/lib/kaeltehilfe/capacityEngine';
 
 interface FacilityCardProps {
   facility: Facility;
@@ -26,6 +32,7 @@ interface FacilityCardProps {
   onSelect: (facility: Facility) => void;
   onOpenDetails: (facility: Facility) => void;
   onOpenPrint: (facility: Facility) => void;
+  distanceKm?: number;
 }
 
 export const FacilityCard: React.FC<FacilityCardProps> = ({
@@ -34,14 +41,41 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({
   onSelect,
   onOpenDetails,
   onOpenPrint,
+  distanceKm,
 }) => {
   const [copied, setCopied] = useState(false);
   const { isBookmarked, toggleBookmark } = useBookmarks();
-  const { notesCountByFacility, currentOrganization } = useTeam();
+  const { notesCountByFacility, currentOrganization, allTeamFacilityNotes } = useTeam();
   const bookmarked = isBookmarked(facility.id);
   const isAmt = facility.institutionType === 'amt';
   const isNiedrigschwellig = facility.accessType === 'niedrigschwellig';
   const teamNotesCount = currentOrganization ? (notesCountByFacility[facility.id] || 0) : 0;
+
+  // Kältehilfe & Notversorgung Erkennung
+  const isKaeltehilfe = useMemo(() => {
+    const text = `${facility.name} ${facility.subTitle} ${facility.internalWorkerNotes || ''} ${(facility.targetGroups || []).join(' ')}`.toLowerCase();
+    return (
+      text.includes('kälte') ||
+      text.includes('notübernachtung') ||
+      text.includes('wärmestube') ||
+      text.includes('nachtcafé') ||
+      text.includes('sleep-in') ||
+      text.includes('obdachlos') ||
+      text.includes('wohnungslos')
+    );
+  }, [facility]);
+
+  const admission = useMemo(() => {
+    return getAdmissionStatus(facility);
+  }, [facility]);
+
+  const facilityNotes = useMemo(() => {
+    return (allTeamFacilityNotes || []).filter((n) => n.facilityId === facility.id);
+  }, [allTeamFacilityNotes, facility.id]);
+
+  const nightWarning = useMemo(() => {
+    return getActiveNightWarning(facilityNotes);
+  }, [facilityNotes]);
 
   // Formatierter Vermerk für Falldokumentation (SoPart, LISSA etc.)
   const handleCopyNote = (e: React.MouseEvent) => {
@@ -114,6 +148,25 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
               {facility.district}
             </span>
 
+            {/* Kältehilfe Einlass-Status Badge (Keine pauschale rote Ampel) */}
+            {isKaeltehilfe && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${
+                  admission.color === 'emerald'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    : admission.color === 'blue'
+                    ? 'bg-blue-50 text-blue-800 border-blue-300'
+                    : admission.color === 'indigo'
+                    ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                    : 'bg-amber-50 text-amber-800 border-amber-300'
+                }`}
+                title={admission.detail}
+              >
+                <Clock className="w-3 h-3 shrink-0" />
+                <span>{admission.badge}</span>
+              </span>
+            )}
+
             {/* Team Notes Indicator Badge */}
             {teamNotesCount > 0 && (
               <span
@@ -154,14 +207,50 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
           </p>
         </div>
 
+        {/* Frische Nacht-Warnung / Team-Meldung mit 12-Stunden / 08:00 TTL */}
+        {nightWarning.activeWarning && (
+          <div className="mb-2.5 ml-1.5 p-2 rounded-lg bg-rose-50 border border-rose-200/80 text-xs text-rose-900 flex items-start gap-2 shadow-2xs">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-bold text-rose-800">
+                  Team-Meldung ({nightWarning.formattedAge}):
+                </span>
+                <span className="text-[10px] text-rose-600 font-medium">Gültig bis Dienstende</span>
+              </div>
+              <p className="text-rose-950 mt-0.5 font-medium leading-snug">
+                {nightWarning.activeWarning.content}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ÖPNV & Standort Box */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-600 gap-1.5 py-1.5 px-2.5 bg-slate-50/90 rounded-lg border border-slate-200/60 mb-2.5 ml-1.5">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Train className="w-3.5 h-3.5 text-blue-600 shrink-0" />
             <span className="font-medium text-slate-800">{facility.transit.station}</span>
             <span className="text-slate-400">({facility.transit.walkingTime})</span>
+            <a
+              href={getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-1.5 py-0.5 rounded border border-amber-300 transition-colors ml-0.5"
+              title="Öffne direkte BVG Verbindungssuche"
+            >
+              BVG Route
+            </a>
           </div>
-          <span className="text-slate-500 text-[11px] truncate">{facility.address.street}</span>
+          <div className="flex items-center gap-1.5">
+            {distanceKm !== undefined && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded shrink-0">
+                <Navigation className="w-2.5 h-2.5 text-blue-600" />
+                <span>{formatDistance(distanceKm)}</span>
+              </span>
+            )}
+            <span className="text-slate-500 text-[11px] truncate">{facility.address.street}</span>
+          </div>
         </div>
 
         {/* Rechtsgrundlagen */}

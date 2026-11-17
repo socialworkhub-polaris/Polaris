@@ -17,6 +17,7 @@ export interface Organization {
   seatLimit?: number;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  isTrialGranted?: boolean;
 }
 
 export interface OrganizationMember {

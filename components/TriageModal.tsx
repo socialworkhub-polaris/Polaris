@@ -15,10 +15,14 @@ import {
   HousingStatus, UrgencyLevel, LegalResidenceStatus, 
   BenefitStatus, TriageInput, TriageResponse 
 } from '@/types/triage';
+import { Facility } from '@/types/facility';
+import { MOCK_FACILITIES } from '@/data/facilities';
+import { generateDeterministicTriage } from '@/lib/triage/engine';
 
 interface TriageModalProps {
   isOpen: boolean;
   onClose: () => void;
+  facilities?: Facility[];
 }
 
 interface ExaResult {
@@ -33,10 +37,11 @@ const BERLIN_DISTRICTS = [
   'Treptow-Köpenick', 'Marzahn-Hellersdorf', 'Lichtenberg', 'Reinickendorf'
 ];
 
-export default function TriageModal({ isOpen, onClose }: TriageModalProps) {
+export default function TriageModal({ isOpen, onClose, facilities = [] }: TriageModalProps) {
   const { user, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isOfflineGenerated, setIsOfflineGenerated] = useState<boolean>(false);
   const [triageUsage, setTriageUsage] = useState<{
     used: number;
     max: number;
@@ -193,6 +198,20 @@ export default function TriageModal({ isOpen, onClose }: TriageModalProps) {
     setError(null);
     setExaResults([]);
     setExaError(null);
+    setIsOfflineGenerated(false);
+
+    const availableFacilities = facilities.length > 0 ? facilities : MOCK_FACILITIES;
+
+    // 1. Instant offline fallback if device is currently disconnected
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const offlineResult = generateDeterministicTriage(formData, availableFacilities);
+      setResult(offlineResult);
+      setOriginalResult(offlineResult);
+      setSelectedLang('de');
+      setIsOfflineGenerated(true);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -220,6 +239,7 @@ export default function TriageModal({ isOpen, onClose }: TriageModalProps) {
       setResult(data);
       setOriginalResult(data);
       setSelectedLang('de');
+      setIsOfflineGenerated(false);
 
       if ((data as any).usage) {
         setTriageUsage({
@@ -230,7 +250,24 @@ export default function TriageModal({ isOpen, onClose }: TriageModalProps) {
         });
       }
     } catch (err: any) {
-      setError(err.message || 'Etwas ist schiefgelaufen.');
+      // Automatic fallback to offline statutory engine if connection drops or network fails
+      if (
+        err.name === 'TypeError' ||
+        err.message?.includes('fetch') ||
+        err.message?.includes('Network') ||
+        err.message?.includes('Failed to fetch') ||
+        (typeof navigator !== 'undefined' && !navigator.onLine)
+      ) {
+        console.warn('Network failure during triage, switching to offline statutory engine:', err);
+        const offlineResult = generateDeterministicTriage(formData, availableFacilities);
+        setResult(offlineResult);
+        setOriginalResult(offlineResult);
+        setSelectedLang('de');
+        setIsOfflineGenerated(true);
+        setError(null);
+      } else {
+        setError(err.message || 'Etwas ist schiefgelaufen.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1096,6 +1133,16 @@ const handlePrint = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Offline Streetwork Status Badge */}
+              {isOfflineGenerated && (
+                <div className="flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 print:hidden shadow-xs">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div className="flex-1 leading-relaxed">
+                    <span className="font-bold">Offline-Streetwork-Modus:</span> Dieser Handlungsplan wurde ohne Serververbindung lokal & deterministisch nach den gesetzlichen Vorgaben (§ 8a SGB VIII / § 36 SGB XII / ASOG Berlin) erstellt.
+                  </div>
+                </div>
+              )}
               
               {/* Fallübersicht */}
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl print:hidden">

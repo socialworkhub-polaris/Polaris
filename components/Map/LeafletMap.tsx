@@ -20,6 +20,7 @@ interface LeafletMapProps {
   onOpenPrint: (facility: Facility) => void;
   selectedDistrict?: BerlinDistrict | 'all';
   onSelectDistrict?: (district: BerlinDistrict) => void;
+  userLocation?: [number, number] | null;
 }
 
 // Google Maps-inspired warm & vibrant cartography styling
@@ -113,8 +114,11 @@ const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = DEFAULT_PMTI
   return null;
 };
 
-// Controller component to smoothly fly map to selected facility
-const MapController: React.FC<{ selectedFacility: Facility | null }> = ({ selectedFacility }) => {
+// Controller component to smoothly fly map to selected facility or user location
+const MapController: React.FC<{
+  selectedFacility: Facility | null;
+  userLocation?: [number, number] | null;
+}> = ({ selectedFacility, userLocation }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -125,6 +129,15 @@ const MapController: React.FC<{ selectedFacility: Facility | null }> = ({ select
       });
     }
   }, [selectedFacility, map]);
+
+  useEffect(() => {
+    if (userLocation && !selectedFacility) {
+      map.flyTo(userLocation, 14, {
+        animate: true,
+        duration: 1.2,
+      });
+    }
+  }, [userLocation, selectedFacility, map]);
 
   return null;
 };
@@ -251,6 +264,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   onOpenPrint,
   selectedDistrict,
   onSelectDistrict,
+  userLocation,
 }) => {
   const berlinCenter: [number, number] = [52.518, 13.405];
   // 100% GDPR-compliant self-hosted PMTiles source on Cloudflare R2
@@ -326,8 +340,33 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         {/* Self-hosted vector tile layer via Protomaps PMTiles */}
         <ProtomapsLayer tileUrl={pmtilesUrl} />
 
-        <MapController selectedFacility={selectedFacility} />
+        <MapController selectedFacility={selectedFacility} userLocation={userLocation} />
         <DistrictController selectedDistrict={selectedDistrict} />
+
+        {/* User GPS Streetwork Location Marker */}
+        {userLocation && (
+          <Marker
+            position={userLocation}
+            icon={L.divIcon({
+              className: 'user-gps-pulse-marker',
+              html: `
+                <div style="position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
+                  <div style="position:absolute;width:24px;height:24px;border-radius:9999px;background:rgba(59,130,246,0.35);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+                  <div style="width:14px;height:14px;border-radius:9999px;background:#2563eb;border:2.5px solid #ffffff;box-shadow:0 2px 5px rgba(0,0,0,0.35);"></div>
+                </div>
+              `,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12],
+            })}
+          >
+            <Popup>
+              <div className="text-xs p-1">
+                <div className="font-bold text-slate-900">Dein aktueller Standort</div>
+                <div className="text-slate-600 text-[11px] mt-0.5">Streetwork GPS aktiv</div>
+              </div>
+            </Popup>
+          </Marker>
+        )}
 
         {/* Berlin LOR / Statutory District Boundaries */}
         {showDistricts && (

@@ -29,6 +29,8 @@ import { ReportCorrectionModal } from './ReportCorrectionModal';
 import { PersonalNotesSection } from './PersonalNotesSection';
 import { TeamNotesSection } from './TeamNotesSection';
 import { TeamModal } from './TeamModal';
+import { QRCodeCard } from './QRCodeCard';
+import { getBVGRouteUrl, getTransitDirectionsUrl } from '@/lib/geolocation';
 
 interface DetailDrawerProps {
   facility: Facility | null;
@@ -226,6 +228,39 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
                     Linien: {facility.transit.lines.join(', ')} • {facility.transit.walkingTime}
                   </p>
                 </div>
+              </div>
+
+              {/* 1-Tap Routing Buttons & QR Code */}
+              <div className="pt-2 border-t border-slate-200/80 flex flex-wrap items-center gap-2">
+                <a
+                  href={getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition shadow-2xs"
+                  title="Öffnet die BVG Verbindungssuche mit diesem Ziel"
+                >
+                  <Train className="w-3.5 h-3.5 text-amber-700" />
+                  <span>BVG Route planen</span>
+                </a>
+                <a
+                  href={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold transition shadow-2xs"
+                  title="In Google Maps mit ÖPNV-Führung öffnen"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Google Maps</span>
+                </a>
+              </div>
+
+              <div className="pt-2">
+                <QRCodeCard
+                  value={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  label="Klienten-Navigation (QR-Code)"
+                  sublabel="Klient*in kann den Code direkt vom Bildschirm scannen für die Live-Navigation"
+                  size={95}
+                />
               </div>
             </div>
 

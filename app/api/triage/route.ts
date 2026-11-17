@@ -5,184 +5,12 @@ import { Facility } from '@/types/facility';
 import { MOCK_FACILITIES } from '@/data/facilities';
 import { supabase, fetchFacilitiesFromSupabase } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rateLimit';
-
-// Helper: Matches district string with borough aliases
-function matchesDistrictOrCitywide(facDistrictRaw: string, targetDistrictRaw: string): boolean {
-  if (!targetDistrictRaw) return true;
-  const facD = facDistrictRaw.toLowerCase().trim();
-  const targetD = targetDistrictRaw.toLowerCase().trim();
-
-  if (!facD || facD.includes('berlinweit') || facD === 'berlin') return true;
-  if (facD.includes(targetD) || targetD.includes(facD)) return true;
-
-  const targetParts = targetD.split(/[-–/\s]+/).filter((p) => p.length > 3);
-  const facParts = facD.split(/[-–/\s]+/).filter((p) => p.length > 3);
-
-  return targetParts.some((tp) => facD.includes(tp)) || facParts.some((fp) => targetD.includes(fp));
-}
-
-// Input sanitizer against prompt injection & oversized payloads
-function sanitizeNotes(raw: string | undefined): string {
-  if (!raw) return 'Keine';
-  return raw
-    .replace(/```/g, '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\b(system|assistant|instruction|prompt)\s*:/gi, '')
-    .slice(0, 400)
-    .trim() || 'Keine';
-}
-
-// 0-Tokens Deterministic Pre-Filter
-function prefilterRelevantFacilities(input: TriageInput, allFacilities: Facility[]): Facility[] {
-  const targetDistrict = input.district?.trim() || '';
-  const isMinor = input.clientAge !== undefined && input.clientAge < 18;
-  const isStableHoused = input.housingStatus === 'parental_home' || (input.housingStatus as string) === 'regular_rent';
-
-  const filtered = allFacilities.filter((fac: any) => {
-    const facDistrict = (fac.district || '').trim();
-    const focus = (fac.primaryFocus || fac.category || '').toLowerCase();
-    const name = (fac.name || '').toLowerCase();
-    const targetGroups: string[] = Array.isArray(fac.targetGroups)
-      ? fac.targetGroups.map((g: string) => g.toLowerCase())
-      : [];
-
-    // 1. Accessibility & Pet constraints
-    if (input.hasPet && fac.features?.dogsAllowed === false) return false;
-    if (input.hasMobilityImpairment && fac.features?.wheelchairAccessible === false) return false;
-
-    // 2. Strict district jurisdiction for statutory agencies (Ämter)
-    if (fac.institutionType === 'amt' && targetDistrict) {
-      if (!matchesDistrictOrCitywide(facDistrict, targetDistrict)) {
-        return false;
-      }
-    }
-
-    // 3. Child protection & SGB VIII circuit breaker
-    if (isMinor) {
-      if (
-        focus.includes('notuebernachtung') ||
-        focus.includes('wohnungslos') ||
-        focus.includes('sgb xii') ||
-        name.includes('notübernachtung') ||
-        name.includes('wohnheim') ||
-        name.includes('jobcenter')
-      ) {
-        return false;
-      }
-
-      const isYouthFacility =
-        targetGroups.includes('kinder') ||
-        targetGroups.includes('jugendliche') ||
-        targetGroups.includes('familie') ||
-        focus.includes('jugend') ||
-        focus.includes('familie') ||
-        name.includes('jugendamt') ||
-        name.includes('erziehungsberatung') ||
-        name.includes('kinder- und jugend') ||
-        name.includes('kinderschutz');
-
-      if (!isYouthFacility) return false;
-    } else {
-      if (
-        (name.includes('kindernotdienst') || name.includes('jugendnotdienst')) &&
-        input.clientAge !== undefined && input.clientAge >= 21
-      ) {
-        return false;
-      }
-    }
-
-    // 4. Substance & Mental Health filtering
-    const isSubstance =
-      focus.includes('sucht') ||
-      focus.includes('droge') ||
-      name.includes('sucht') ||
-      name.includes('fixpunkt') ||
-      name.includes('drogen');
-
-    if (!input.needsSubstanceOrMentalSupport && isSubstance) {
-      return false;
-    }
-
-    // 5. Stable housing constraint (no homeless shelters if client has tenancy)
-    if (isStableHoused) {
-      if (
-        focus.includes('notuebernachtung') ||
-        focus.includes('wohnungslos') ||
-        name.includes('notübernachtung') ||
-        name.includes('kältehilfe') ||
-        name.includes('schlafplatz')
-      ) {
-        return false;
-      }
-    }
-
-    // 6. District matching for local providers
-    if (targetDistrict && facDistrict && !matchesDistrictOrCitywide(facDistrict, targetDistrict)) {
-      if (!facDistrict.toLowerCase().includes('berlinweit') && facDistrict.toLowerCase() !== 'berlin') {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  return filtered.slice(0, 10);
-}
-
-// Fallback logic when AI is unavailable
-function generateFallback(input: TriageInput, candidates: Facility[]): TriageResponse {
-  const isMinor = input.clientAge !== undefined && input.clientAge < 18;
-
-  if (isMinor) {
-    return {
-      summary: `Jugendhilfe-Erstabklärung (SGB VIII) für den Bezirk ${input.district || 'Berlin'}.`,
-      legalContext: ['SGB VIII (Kinder- und Jugendhilfe)', '§ 8a SGB VIII (Schutzauftrag)', '§ 28 SGB VIII (Erziehungsberatung)'],
-      steps: [
-        {
-          phase: 'sofort',
-          title: 'Kontaktaufnahme Jugendamt / Regionaler Sozialpädagogischer Dienst (RSD)',
-          action: 'Persönliche oder telefonische Meldung beim RSD zur Sicherung des Kindeswohls und Klärung der Hilfen zur Erziehung.',
-          requiredDocs: [input.hasIdOrPassport ? 'Schülerausweis / Ausweisdokument' : 'Vorsprache auch ohne Ausweis möglich'],
-          matchedFacilities: candidates.filter(c => c.name.toLowerCase().includes('jugend')).slice(0, 1),
-        },
-        {
-          phase: 'beratung',
-          title: 'Erziehungs- und Familienberatung (EFB)',
-          action: 'Niedrigschwellige Unterstützung zur Klärung der familiären Konfliktlage wahrnehmen.',
-          requiredDocs: ['Keine Dokumente zwingend erforderlich'],
-          matchedFacilities: candidates.filter(c => !c.name.toLowerCase().includes('jugendamt')).slice(0, 1),
-        },
-      ],
-    };
-  }
-
-  const immediateFacilities = candidates.filter(c => 
-    c.accessType === 'niedrigschwellig' || c.primaryFocus === 'betreutes_wohnen'
-  ).slice(0, 1);
-
-  const statutoryFacilities = candidates.filter(c => c.institutionType === 'amt').slice(0, 1);
-
-  return {
-    summary: `Sozialrechtlicher Stufenplan für den Bezirk ${input.district || 'Berlin'}.`,
-    legalContext: ['SGB II / SGB XII', '§ 36 SGB XII (Unterkunftssicherung)', 'ASOG Berlin (Gefahrenabwehr)'],
-    steps: [
-      {
-        phase: 'sofort',
-        title: 'Akutversorgung & Notunterbringung',
-        action: 'Klärung der unmittelbaren Existenz- und Übernachtungsmöglichkeit.',
-        requiredDocs: [input.hasIdOrPassport ? 'Ausweisdokument' : 'Vorsprache zur Identitätsklärung'],
-        matchedFacilities: immediateFacilities,
-      },
-      {
-        phase: 'behoerde',
-        title: 'Leistungs- und Existenzsicherung beim Amt',
-        action: 'Persönliche Vorsprache in der Notfallsprechstunde zur Beantragung von existenzsichernden Leistungen.',
-        requiredDocs: ['Kontoauszüge der letzten 3 Monate', 'Mietunterlagen / Mietvertrag (falls vorhanden)'],
-        matchedFacilities: statutoryFacilities,
-      },
-    ],
-  };
-}
+import { executeStructuredPrompt } from '@/lib/ai/gateway';
+import {
+  prefilterRelevantFacilities,
+  generateDeterministicTriage,
+  sanitizeNotes,
+} from '@/lib/triage/engine';
 
 // ---------------------------------------------------------------------
 // GET /api/triage: Check current user's monthly quota status
@@ -378,7 +206,7 @@ export async function POST(req: Request) {
     if (sb.facilities && sb.facilities.length > 0) {
       allFacilities = sb.facilities;
     }
-  } catch (e) {
+  } catch {
     // silently keep mock data
   }
 
@@ -402,14 +230,6 @@ export async function POST(req: Request) {
     schwerpunkt: f.primaryFocus,
     bezirk: f.district || 'berlinweit',
   }));
-
-  const apiKey = process.env.MISTRAL_API_KEY || process.env.AI_API_KEY;
-  const baseURL = process.env.AI_BASE_URL || 'https://api.mistral.ai/v1';
-  const model = process.env.AI_MODEL || 'mistral-small-latest';
-
-  if (!apiKey || apiKey.includes('hier-deinen-echten')) {
-    return NextResponse.json(generateFallback(input, activeCandidates));
-  }
 
   try {
     const isMinor = input.clientAge !== undefined && input.clientAge < 18;
@@ -465,51 +285,36 @@ Klientendaten:
 - Notizen / Fachkontext: ${cleanNotes}
 `;
 
-    const response = await fetch(`${baseURL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.1,
-        max_tokens: 1200,
-        response_format: { type: 'json_object' },
-      }),
+    const aiResult = await executeStructuredPrompt<{
+      summary: string;
+      legalContext: string[];
+      steps: {
+        phase: 'sofort' | 'behoerde' | 'beratung';
+        title: string;
+        action: string;
+        requiredDocs?: string[];
+        facilityId?: string | null;
+      }[];
+    }>(systemPrompt, userPrompt, {
+      temperature: 0.1,
+      maxTokens: 1200,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('KI Inferenz Fehler (Mistral/AI Gateway):', response.status, errText);
-      return NextResponse.json(generateFallback(input, activeCandidates));
+    if (!aiResult.success || !aiResult.data) {
+      console.warn('AI Gateway Fallback triggered:', aiResult.error);
+      const fallback = generateDeterministicTriage(input, activeCandidates);
+      return NextResponse.json({
+        ...fallback,
+        usage: usageInfo,
+      });
     }
 
-    const aiData = await response.json();
-    const rawContent = aiData.choices?.[0]?.message?.content || '{}';
-
-    let cleanedContent = rawContent.trim();
-    if (cleanedContent.startsWith('```json')) {
-      cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(cleanedContent);
-    } catch {
-      return NextResponse.json(generateFallback(input, activeCandidates));
-    }
+    const parsed = aiResult.data;
 
     // Step facility enrichment with strict safety verification
     const stepsWithFacilities: TriageStep[] = (parsed.steps || []).map((step: any) => {
       let matched: Facility[] = [];
-      
+
       if (step.facilityId) {
         const found = allFacilities.find((f) => f.id === step.facilityId);
         if (found) matched.push(found);
@@ -518,8 +323,7 @@ Klientendaten:
       // If no valid ID was matched, attempt a conservative keyword match from activeCandidates
       if (matched.length === 0 && activeCandidates.length > 0) {
         const titleLower = (step.title || '').toLowerCase();
-        const actionLower = (step.action || '').toLowerCase();
-        
+
         const smartMatch = activeCandidates.find((c) => {
           const nameLower = c.name.toLowerCase();
           const subLower = (c.subTitle || '').toLowerCase();
@@ -536,7 +340,6 @@ Klientendaten:
         if (smartMatch) {
           matched.push(smartMatch);
         }
-        // Note: NEVER push a random candidate fallback if unconfident!
       }
 
       return {
@@ -557,7 +360,7 @@ Klientendaten:
   } catch (err) {
     console.error('Verarbeitungsfehler im Triage-Endpoint:', err);
     return NextResponse.json({
-      ...generateFallback(input, activeCandidates),
+      ...generateDeterministicTriage(input, activeCandidates),
       usage: usageInfo,
     });
   }

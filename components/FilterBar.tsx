@@ -15,6 +15,8 @@ import {
   Users,
   Calendar,
   Snowflake,
+  Navigation,
+  Loader2,
 } from 'lucide-react';
 import { FilterState, InstitutionType, AccessType, PrimaryFocus, BerlinDistrict, AgeGroup } from '@/types/facility';
 import { BERLIN_DISTRICTS, PRIMARY_FOCUS_OPTIONS, AGE_GROUP_OPTIONS, COMMON_LANGUAGES } from '@/data/districts';
@@ -30,6 +32,9 @@ interface FilterBarProps {
   onToggleBookmarks?: () => void;
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
+  userLocation?: [number, number] | null;
+  onToggleNearby?: () => void;
+  isLocating?: boolean;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -42,6 +47,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onToggleBookmarks,
   isExpanded: controlledExpanded,
   onToggleExpanded,
+  userLocation,
+  onToggleNearby,
+  isLocating = false,
 }) => {
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
@@ -138,6 +146,34 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <Snowflake className={`w-3.5 h-3.5 ${filterState.kaeltehilfeOnly ? 'animate-pulse text-white' : 'text-cyan-600'}`} />
             <span>{t.coldRelief}</span>
           </button>
+
+          {/* GPS / In meiner Nähe Button */}
+          {onToggleNearby && (
+            <button
+              type="button"
+              onClick={onToggleNearby}
+              disabled={isLocating}
+              className={`inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg border transition-all shrink-0 cursor-pointer disabled:opacity-60 ${
+                userLocation
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-sm ring-2 ring-blue-400/30 font-bold'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+              title={
+                userLocation
+                  ? 'Standort-Sortierung aktiv (Klicken zum Deaktivieren)'
+                  : 'Aktuellen Standort ermitteln & Einrichtungen nach Entfernung sortieren'
+              }
+            >
+              {isLocating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+              ) : (
+                <Navigation className={`w-3.5 h-3.5 ${userLocation ? 'fill-white text-white' : 'text-blue-600'}`} />
+              )}
+              <span className="hidden sm:inline">
+                {isLocating ? 'Lokalisiere...' : userLocation ? 'In der Nähe (Aktiv)' : 'In der Nähe'}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Träger-Segment (Amt vs. Träger) */}

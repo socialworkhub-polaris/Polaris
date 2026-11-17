@@ -32,6 +32,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { Facility } from '@/types/facility';
 import { AnnouncementPriority, NoteCategory, CalendarEventCategory, TeamCalendarEvent } from '@/types/team';
 import TeamFeatureShowcaseModal from '@/components/TeamFeatureShowcaseModal';
+import { scanTextForPII } from '@/lib/compliance/piiScanner';
 
 interface TeamHubModalProps {
   isOpen: boolean;
@@ -155,6 +156,11 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
   const [isPinned, setIsPinned] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const announcementPii = useMemo(
+    () => scanTextForPII(`${title} ${content}`),
+    [title, content]
+  );
 
   // Calendar states
   const [calendarViewMode, setCalendarViewMode] = useState<'agenda' | 'month'>('agenda');
@@ -286,6 +292,13 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
   const handlePostAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
+
+    if (announcementPii.hasPII) {
+      const confirmPost = confirm(
+        `⚠️ Sozialgeheimnis (§ 35 SGB I / § 203 StGB):\n\nDer Aushang enthält möglicherweise personenbezogene Daten (${announcementPii.detectedTypes.join(', ')}).\n\nBitte keine Klientennamen oder privaten Daten am Schwarzen Brett veröffentlichen.\n\nTrotzdem aushängen?`
+      );
+      if (!confirmPost) return;
+    }
 
     setSubmitting(true);
     setErrorMsg(null);
@@ -573,6 +586,20 @@ export const TeamHubModal: React.FC<TeamHubModalProps> = ({
                       className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                  {/* PII & Sozialgeheimnis Hint */}
+                  {announcementPii.hasPII && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-[11px] text-amber-900 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                        <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Sozialdatenschutz-Hinweis (§ 35 SGB I / § 203 StGB)</span>
+                      </div>
+                      <p>
+                        Mögliche personenbezogene Daten erkannt: <strong>{announcementPii.detectedTypes.join(', ')}</strong>.
+                        Bitte keine Klientennamen, Geburtsdaten oder privaten Kontaktdaten am Schwarzen Brett veröffentlichen.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
                     <div className="flex items-center gap-2">

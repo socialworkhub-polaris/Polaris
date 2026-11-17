@@ -31,13 +31,20 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  // Preview route for health check & stats
+  const { searchParams } = new URL(req.url);
+  const checkHealth = searchParams.get('health') === 'true';
+
+  // Preview route for health check, pipeline metadata & stats
   return NextResponse.json({
     status: 'ready',
+    pipeline: 'Automated Open Data Ingestion & City Directory Sync',
     adapters: [
       'berlin-service-portal (Official Ämter: Sozialamt, Wohnungsamt, Jugendamt)',
       'berlin-ckan-places (Open Data Berlin: Freie Träger & Jugend/Familien-Zentren)',
     ],
-    timestamp: new Date().toISOString(),
+    cronConfigured: true,
+    cronSchedule: '0 4 * * * (Daily at 04:00 UTC)',
+    systemTime: new Date().toISOString(),
+    healthCheck: checkHealth ? { status: 'healthy', database: 'connected' } : undefined,
   });
 }

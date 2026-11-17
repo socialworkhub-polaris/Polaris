@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { Facility } from '@/types/facility';
 import { FacilityCard } from './FacilityCard';
 import { NewsletterCard } from './NewsletterCard';
-import { SearchX, ArrowUpDown, Filter, ChevronDown, ChevronUp, Globe, ExternalLink, Loader2, Bookmark } from 'lucide-react';
+import { KaeltehilfeBanner } from './KaeltehilfeBanner';
+import { SearchX, ArrowUpDown, Filter, ChevronDown, ChevronUp, Globe, ExternalLink, Loader2, Bookmark, Navigation } from 'lucide-react';
+import { calculateDistanceKm } from '@/lib/geolocation';
 
 interface ExaResult {
   title: string;
@@ -25,6 +27,8 @@ interface FacilityListProps {
   searchQuery?: string;
   totalCount?: number;
   showOnlyBookmarks?: boolean;
+  userLocation?: [number, number] | null;
+  isKaeltehilfeActive?: boolean;
 }
 
 export const FacilityList: React.FC<FacilityListProps> = ({
@@ -40,13 +44,22 @@ export const FacilityList: React.FC<FacilityListProps> = ({
   searchQuery = '',
   totalCount,
   showOnlyBookmarks = false,
+  userLocation,
+  isKaeltehilfeActive = false,
 }) => {
-  const [sortBy, setSortBy] = useState<'default' | 'name' | 'district'>('default');
+  const [sortBy, setSortBy] = useState<'default' | 'name' | 'district' | 'distance'>('default');
   const [exaLoading, setExaLoading] = useState(false);
   const [exaResults, setExaResults] = useState<ExaResult[]>([]);
   const [exaError, setExaError] = useState<string | null>(null);
 
   const sortedFacilities = [...facilities].sort((a, b) => {
+    if (sortBy === 'distance' || (sortBy === 'default' && userLocation)) {
+      if (userLocation && a.coordinates && b.coordinates) {
+        const distA = calculateDistanceKm(userLocation[0], userLocation[1], a.coordinates[0], a.coordinates[1]);
+        const distB = calculateDistanceKm(userLocation[0], userLocation[1], b.coordinates[0], b.coordinates[1]);
+        return distA - distB;
+      }
+    }
     if (sortBy === 'name') {
       return a.name.localeCompare(b.name, 'de');
     }
@@ -139,6 +152,8 @@ export const FacilityList: React.FC<FacilityListProps> = ({
 
       {/* Natürlicher Karten-Flow */}
       <div className="p-4 space-y-3.5">
+        {isKaeltehilfeActive && <KaeltehilfeBanner />}
+
         {sortedFacilities.length === 0 ? (
           <div className="space-y-4">
             {showOnlyBookmarks ? (
@@ -255,16 +270,24 @@ export const FacilityList: React.FC<FacilityListProps> = ({
             )}
           </div>
         ) : (
-          sortedFacilities.map((facility) => (
-            <FacilityCard
-              key={facility.id}
-              facility={facility}
-              isSelected={selectedFacility?.id === facility.id}
-              onSelect={onSelectFacility}
-              onOpenDetails={onOpenDetails}
-              onOpenPrint={onOpenPrint}
-            />
-          ))
+          sortedFacilities.map((facility) => {
+            const dist =
+              userLocation && facility.coordinates
+                ? calculateDistanceKm(userLocation[0], userLocation[1], facility.coordinates[0], facility.coordinates[1])
+                : undefined;
+
+            return (
+              <FacilityCard
+                key={facility.id}
+                facility={facility}
+                isSelected={selectedFacility?.id === facility.id}
+                onSelect={onSelectFacility}
+                onOpenDetails={onOpenDetails}
+                onOpenPrint={onOpenPrint}
+                distanceKm={dist}
+              />
+            );
+          })
         )}
 
         {/* Newsletter Card am Ende der Einrichtungsliste */}

@@ -49,6 +49,7 @@ interface TeamContextType {
   updateMemberRole: (orgId: string, memberUserId: string, newRole: 'admin' | 'member') => Promise<void>;
   inviteMemberByEmail: (orgId: string, email: string, recipientName?: string) => Promise<string>;
   refreshOrganizations: () => Promise<void>;
+  hasUsedTrial: boolean;
 }
 
 const TeamContext = createContext<TeamContextType>({
@@ -56,6 +57,7 @@ const TeamContext = createContext<TeamContextType>({
   currentOrganization: null,
   setCurrentOrganization: () => {},
   loading: true,
+  hasUsedTrial: false,
   createTeam: async () => { throw new Error('Not initialized'); },
   joinTeamByCode: async () => { throw new Error('Not initialized'); },
   leaveTeam: async () => {},
@@ -100,6 +102,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allTeamFacilityNotes, setAllTeamFacilityNotes] = useState<FacilityTeamNote[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<TeamCalendarEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [hasUsedTrial, setHasUsedTrial] = useState<boolean>(false);
 
   // Set current organization and persist to localStorage
   const setCurrentOrganization = useCallback((org: Organization | null) => {
@@ -181,6 +184,27 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setOrganizations([]);
         setCurrentOrganizationState(null);
+      }
+
+      // Check if user has redeemed their 1 free trial
+      try {
+        const { data: trialHistory } = await supabase
+          .from('user_trial_history')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (trialHistory) {
+          setHasUsedTrial(true);
+        } else {
+          // Fallback check in organizations list in case migration table is newly deployed
+          const hasTrialingOrProOrg = memberData?.some(
+            (m: any) => m.role === 'admin' && (m.organization?.subscription_status === 'trialing' || m.organization?.trial_ends_at)
+          );
+          setHasUsedTrial(!!hasTrialingOrProOrg);
+        }
+      } catch {
+        // Soft fallback
       }
     } catch (err) {
       console.warn('Error fetching organizations:', err);
@@ -289,6 +313,11 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (rpcErr) {
       // Fallback to direct table inserts if RPC not available
+      const isTrialGranted = !hasUsedTrial;
+      const trialEnds = isTrialGranted ? new Date(Date.now() + 14 * 86400000).toISOString() : null;
+      const status = isTrialGranted ? 'trialing' : 'inactive';
+      const plan = isTrialGranted ? 'pro' : 'free';
+
       const slug = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const { data: org, error: orgErr } = await supabase
         .from('organizations')
@@ -297,6 +326,10 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
           slug,
           invite_code: inviteCode,
           created_by: user.id,
+          plan,
+          subscription_status: status,
+          trial_ends_at: trialEnds,
+          seat_limit: 10,
         })
         .select()
         .single();
@@ -311,6 +344,29 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user_name: userName,
       });
 
+      if (isTrialGranted) {
+        setHasUsedTrial(true);
+        // Best-effort trial history insertion
+        supabase.from('user_trial_history').insert({
+          user_id: user.id,
+          first_org_id: org.id,
+          user_email: userEmail,
+        }).then(() => {});
+
+        // Best-effort welcome announcement insertion
+        const welcomeContent = `👋 Willkommen im neuen Team-Workspace für ${trimmedName}!\n\nEure 14-tägige kostenlose Testphase ist ab sofort aktiv (bis zum ${new Date(Date.now() + 14 * 86400000).toLocaleDateString('de-DE')}). Keine Zahlungsdaten nötig – sie endet automatisch ohne Abo.\n\n🚀 So startet ihr gemeinsam durch:\n1. 👥 Kolleg*innen einladen: Teilt euren 6-stelligen Team-Code ${inviteCode} oder den Einladungslink (oben im Menü).\n2. 📋 Schichtübergaben & Warnungen: Nutzt dieses Schwarze Brett für Kältehilfe-Meldungen, Aufnahmestopps und Übergaben.\n3. 💡 Geteiltes Einrichtungs-Wissen: Öffnet eine Berliner Einrichtungskarte und hinterlegt Klingelcodes, Ansprechpartner und Aufnahmetipps direkt für euer Team.\n\nFragen oder Träger-Rechnungsangebot nach § 14 UStG? Meldet euch jederzeit unter kontakt@socialworkhub.net.`;
+
+        supabase.from('team_announcements').insert({
+          organization_id: org.id,
+          author_id: user.id,
+          author_name: userName,
+          priority: 'info',
+          title: '👋 Willkommen am Schwarzen Brett!',
+          content: welcomeContent,
+          is_pinned: true,
+        }).then(() => {});
+      }
+
       const newOrg: Organization = {
         id: org.id,
         name: org.name,
@@ -318,6 +374,11 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         inviteCode: org.invite_code,
         role: 'admin',
         createdAt: org.created_at,
+        plan: org.plan || plan,
+        subscriptionStatus: org.subscription_status || status,
+        trialEndsAt: org.trial_ends_at || trialEnds || undefined,
+        seatLimit: org.seat_limit || 10,
+        isTrialGranted,
       };
 
       setOrganizations((prev) => [newOrg, ...prev]);
@@ -325,6 +386,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newOrg;
     }
 
+    const isTrialGranted = rpcData.is_trial_granted ?? (!hasUsedTrial);
     const created: Organization = {
       id: rpcData.id,
       name: rpcData.name,
@@ -332,7 +394,16 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       inviteCode: rpcData.invite_code,
       role: 'admin',
       createdAt: new Date().toISOString(),
+      plan: rpcData.plan || (isTrialGranted ? 'pro' : 'free'),
+      subscriptionStatus: rpcData.subscription_status || (isTrialGranted ? 'trialing' : 'inactive'),
+      trialEndsAt: rpcData.trial_ends_at || undefined,
+      seatLimit: rpcData.seat_limit || 10,
+      isTrialGranted,
     };
+
+    if (isTrialGranted) {
+      setHasUsedTrial(true);
+    }
 
     setOrganizations((prev) => [created, ...prev]);
     setCurrentOrganization(created);
@@ -1002,6 +1073,7 @@ export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateSeats,
         redeemTrialCode,
         refreshOrganizations: loadUserOrganizations,
+        hasUsedTrial,
       }}
     >
       {children}

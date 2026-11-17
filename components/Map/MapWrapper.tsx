@@ -13,6 +13,7 @@ interface MapWrapperProps {
   onOpenPrint: (facility: Facility) => void;
   selectedDistrict?: BerlinDistrict | 'all';
   onSelectDistrict?: (district: BerlinDistrict) => void;
+  userLocation?: [number, number] | null;
 }
 
 // Dynamically import LeafletMap with SSR disabled to prevent `window is not defined`

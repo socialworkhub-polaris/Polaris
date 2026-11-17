@@ -53,6 +53,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
     openBillingPortal,
     startStripeCheckout,
     inviteMemberByEmail,
+    hasUsedTrial,
   } = useTeam();
   const [billingLoading, setBillingLoading] = useState(false);
   const [seatLoading, setSeatLoading] = useState(false);
@@ -143,12 +144,17 @@ export const TeamModal: React.FC<TeamModalProps> = ({
     setSubmitting(true);
     try {
       const created = await createTeam(newTeamName);
-      setSuccessMsg(`Team "${created.name}" erfolgreich erstellt!`);
+      if (created.isTrialGranted || created.subscriptionStatus === 'trialing') {
+        const endDateStr = created.trialEndsAt ? new Date(created.trialEndsAt).toLocaleDateString('de-DE') : 'in 14 Tagen';
+        setSuccessMsg(`🎉 Team "${created.name}" erfolgreich erstellt! Deine 14-tägige kostenlose Testphase ist aktiv (bis ${endDateStr}).`);
+      } else {
+        setSuccessMsg(`Team "${created.name}" erfolgreich erstellt!`);
+      }
       setNewTeamName('');
       setTimeout(() => {
         setSuccessMsg(null);
         setTab('invite');
-      }, 1200);
+      }, 1600);
     } catch (err: any) {
       setErrorMsg(err.message || 'Fehler beim Erstellen des Teams.');
     } finally {
@@ -264,7 +270,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Neues Team</span>
+            <span>Neues Team {!hasUsedTrial && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200">14 Tage gratis</span>}</span>
           </button>
         </div>
 
@@ -818,9 +824,74 @@ export const TeamModal: React.FC<TeamModalProps> = ({
           {/* TAB 4: CREATE NEW TEAM */}
           {tab === 'create' && (
             <form onSubmit={handleCreateTeam} className="space-y-4">
-              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
-                Erstelle einen neuen Workspace für dein Streetwork- oder Beratungsteam (z.B. Caritas Mitte, Gangway Kreuzberg, AWO Spandau). Du wirst automatisch Team-Admin.
-              </div>
+              {!hasUsedTrial ? (
+                <div className="p-4 bg-gradient-to-br from-indigo-50/90 via-blue-50/60 to-amber-50/50 border border-indigo-200/80 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                      </div>
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-indigo-950">
+                        14 Tage kostenlos testen • Bis zu 10 Fachkräfte
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Endet automatisch • Kein Abo
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-700 leading-relaxed">
+                    Erstelle einen gemeinsamen Workspace für dein Team (z. B. Streetwork-Team, Jugendwohngruppe oder Beratungsstelle). Alle Team-Funktionen sind für 14 Tage sofort freigeschaltet:
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
+                    <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 space-y-1 shadow-xs">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <span className="text-sm">📋</span>
+                        <span>Schwarzes Brett</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Verlustfreie Schichtübergaben & dringende Kältehilfe-Warnungen live im Team.
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 space-y-1 shadow-xs">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <span className="text-sm">💡</span>
+                        <span>Geteiltes Wissen</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Klingelcodes, Ansprechpartner & Aufnahmetipps direkt an Berliner Einrichtungen.
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white/90 border border-slate-200/80 space-y-1 shadow-xs">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                        <span className="text-sm">⚡</span>
+                        <span>Unbegrenzte Triage</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Kein 3er-Monatslimit mehr – freie KI-Paragraphenberatung für alle 10 Kolleg*innen.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600 pt-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Keine Zahlungsdaten nötig • Automatische Beendigung • DSGVO-konform nach § 35 SGB I</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <Info className="w-4 h-4 text-amber-700" />
+                    <span>Weiteres Team erstellen</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    Dein Account hat die 14-tägige Testphase bereits für ein früheres Team genutzt. Dieses neue Team startet im Inaktiv-Modus und kann separat über eine Träger-Lizenz (89 € / Monat) oder einen Pilotcode aktiviert werden.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -829,21 +900,43 @@ export const TeamModal: React.FC<TeamModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="z.B. Caritas Mitte – Streetwork"
+                  placeholder="z.B. Streetwork Zoo, Jugendwohngruppe Neukölln, Caritas Mitte"
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submitting || !newTeamName.trim()}
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer hover:shadow-lg"
               >
-                <Building2 className="w-4 h-4 text-amber-400" />
-                <span>{submitting ? 'Erstelle Team...' : 'Team-Workspace erstellen'}</span>
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Erstelle Team-Workspace...</span>
+                  </>
+                ) : !hasUsedTrial ? (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Kostenlos testen & Team erstellen (14 Tage gratis) 🚀</span>
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="w-4 h-4 text-amber-400" />
+                    <span>Team-Workspace erstellen</span>
+                  </>
+                )}
               </button>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-0.5">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>100% datenschutzkonform nach DSGVO</span>
+                </span>
+                <span>Hosting in Deutschland (EU)</span>
+              </div>
             </form>
           )}
         </div>

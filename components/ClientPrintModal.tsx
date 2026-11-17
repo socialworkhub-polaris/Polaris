@@ -14,8 +14,12 @@ import {
   Building2,
   HeartHandshake,
   Calendar,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
+import { QRCodeCard } from './QRCodeCard';
+import { getBVGRouteUrl, getTransitDirectionsUrl } from '@/lib/geolocation';
 
 interface ClientPrintModalProps {
   facility: Facility | null;
@@ -37,6 +41,82 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadHtml = () => {
+    if (!facility) return;
+    const dest = `${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`;
+    const bvgUrl = getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`);
+    const mapsUrl = getTransitDirectionsUrl(dest);
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${facility.name} — Polaris Klienten-Zettel</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; color: #0f172a; max-width: 800px; margin: 0 auto; line-height: 1.5; }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 16px 0; background: #f8fafc; }
+    .title { font-weight: bold; font-size: 13px; text-transform: uppercase; color: #475569; margin-bottom: 8px; }
+    .btn { display: inline-block; background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-right: 8px; font-size: 12px; }
+    @media print { .no-print { display: none; } body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+    <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">POLARIS • Sozialarbeiter-Kompass Berlin</div>
+    <h1>${facility.name}</h1>
+    <div style="color: #475569; font-size: 14px;">${facility.subTitle || ''}</div>
+  </div>
+
+  <div class="box">
+    <div class="title">📍 Adresse & Anfahrt</div>
+    <p><strong>${facility.address.street}</strong>, ${facility.address.zipCode} Berlin (${facility.district})</p>
+    <p>ÖPNV: <strong>${facility.transit.station}</strong> (${facility.transit.lines.join(', ')} - ${facility.transit.walkingTime})</p>
+    <div class="no-print" style="margin-top: 12px;">
+      <a class="btn" href="${bvgUrl}" target="_blank">🚇 BVG Route planen</a>
+      <a class="btn" href="${mapsUrl}" target="_blank" style="background: #0f172a;">🗺️ Google Maps Navigation</a>
+      ${facility.contact?.phone ? `<a class="btn" href="tel:${facility.contact.phone.replace(/\\s+/g, '')}" style="background: #16a34a;">📞 ${facility.contact.phone}</a>` : ''}
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="title">⏰ Öffnungszeiten & Vorsprache</div>
+    <p><strong>Offene Sprechzeit:</strong> ${facility.openingHours.walkIn}</p>
+    <p><strong>Terminvereinbarung:</strong> ${facility.openingHours.appointment}</p>
+  </div>
+
+  ${facility.requiredDocuments && facility.requiredDocuments.length > 0 ? `
+  <div class="box">
+    <div class="title">📋 Mitzubringende Unterlagen</div>
+    <ul>
+      ${facility.requiredDocuments.map(d => `<li>${d}</li>`).join('')}
+    </ul>
+  </div>` : ''}
+
+  ${workerNote ? `
+  <div class="box" style="background: #eff6ff; border-color: #bfdbfe;">
+    <div class="title" style="color: #1e40af;">📝 Persönliche Notiz / Vereinbarter Termin</div>
+    <p>${workerNote.replace(/\\n/g, '<br>')}</p>
+  </div>` : ''}
+
+  <div style="margin-top: 24px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+    Erstellt mit Polaris — Sozialarbeiter-Kompass Berlin • Datum: ${new Date().toLocaleDateString('de-DE')}
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${facility.name.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, '_')}_Klientenzettel.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const toggleDoc = (doc: string) => {
@@ -69,6 +149,15 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadHtml}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                title="Als HTML-Merkblatt auf Gerät speichern"
+              >
+                <Download className="w-3.5 h-3.5 text-blue-400" />
+                <span>Datei speichern</span>
+              </button>
               <button
                 onClick={handlePrint}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
@@ -116,8 +205,8 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
               </div>
             </div>
 
-            {/* Address & ÖPNV Box */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 print:bg-white print:border-slate-800 print:p-3">
+            {/* Address & ÖPNV Box + QR Navigation */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 print:bg-white print:border-slate-800 print:p-3">
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1.5 print:text-slate-800">
                   <MapPin className="w-4 h-4 text-blue-600 print:text-black" />
@@ -135,7 +224,7 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1.5 print:text-slate-800">
                   <Train className="w-4 h-4 text-blue-600 print:text-black" />
-                  Öffentlicher Nahverkehr (BVG / S-Bahn)
+                  Öffentlicher Nahverkehr (BVG)
                 </h4>
                 <p className="text-sm font-bold text-slate-900">{facility.transit.station}</p>
                 <p className="text-xs text-slate-700">
@@ -144,6 +233,16 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
                 <p className="text-xs text-slate-600 mt-0.5">
                   Fußweg von der Station: <span className="font-medium text-slate-900">{facility.transit.walkingTime}</span>
                 </p>
+              </div>
+
+              <div className="flex items-center justify-center">
+                <QRCodeCard
+                  value={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  label="Handy-Navigation"
+                  sublabel="Kamera auf Code richten für Google Maps & BVG"
+                  size={85}
+                  className="w-full bg-white print:border-slate-400"
+                />
               </div>
             </div>
 

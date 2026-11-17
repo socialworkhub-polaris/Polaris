@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare, ClipboardList, Mail, ChevronDown } from 'lucide-react';
+import { Star, Sparkles, ShieldCheck, CreditCard, MessageSquare, ClipboardList, Mail, ChevronDown, Landmark } from 'lucide-react';
 import UserMenu from '@/components/UserMenu';
 import TeamSelectorDropdown from '@/components/TeamSelectorDropdown';
 import { TeamModal } from '@/components/TeamModal';
@@ -32,6 +32,7 @@ interface HeaderProps {
   isLoading?: boolean;
   onOpenTriage?: () => void;
   onOpenTeamHub?: () => void;
+  onOpenJurisdiction?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -43,6 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
   isLoading = false,
   onOpenTriage,
   onOpenTeamHub,
+  onOpenJurisdiction,
 }) => {
   const [isLegalOpen, setIsLegalOpen] = useState(false);
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
@@ -51,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isUpdatesOpen, setIsUpdatesOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isShowcaseOpen, setIsShowcaseOpen] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const { lang, setLang, t } = useLanguage();
   const { currentOrganization, organizations, announcements } = useTeam();
   const { user } = useAuth();
@@ -78,11 +81,20 @@ export const Header: React.FC<HeaderProps> = ({
     const handleOpenTeam = () => setIsTeamModalOpen(true);
     const handleOpenNewsletter = () => setIsNewsletterOpen(true);
 
+    const updateOnlineStatus = () => {
+      setIsOffline(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+    };
+    updateOnlineStatus();
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
     window.addEventListener('polaris:open-team-showcase', handleOpenShowcase);
     window.addEventListener('polaris:open-license', handleOpenLicense);
     window.addEventListener('polaris:open-team', handleOpenTeam);
     window.addEventListener('polaris:open-newsletter', handleOpenNewsletter);
     return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
       window.removeEventListener('polaris:open-team-showcase', handleOpenShowcase);
       window.removeEventListener('polaris:open-license', handleOpenLicense);
       window.removeEventListener('polaris:open-team', handleOpenTeam);
@@ -126,6 +138,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header ref={headerRef} className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-sm">
+      {isOffline && (
+        <div className="w-full bg-amber-400 text-slate-950 px-3 py-1 text-center text-xs font-bold flex items-center justify-center gap-2 border-b border-amber-500 shadow-xs">
+          <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
+          <span>Offline-Streetwork aktiv: Lokaler Datenpuffer & Offline-Triage einsatzbereit.</span>
+        </div>
+      )}
       <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5">
         <div className="flex items-center justify-between gap-4">
           
@@ -163,6 +181,19 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Sparkles className="w-3.5 h-3.5 text-blue-200" />
                   <span>{t.smartTriage}</span>
+                </button>
+              )}
+
+              {/* Amts- & Behördenzuständigkeit (LOR) */}
+              {onOpenJurisdiction && (
+                <button
+                  type="button"
+                  onClick={onOpenJurisdiction}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs"
+                  title="Zuständige Pflichtbehörden (Jobcenter, RSD, Soziale Wohnhilfe, SpDi) ermitteln"
+                >
+                  <Landmark className="w-3.5 h-3.5 text-amber-300" />
+                  <span className="hidden sm:inline">Ämter-Zuständigkeit</span>
                 </button>
               )}
 

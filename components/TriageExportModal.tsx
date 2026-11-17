@@ -17,6 +17,8 @@ import {
 import { TriageResponse, TriageInput } from '@/types/triage';
 import { useAuth } from '@/lib/AuthContext';
 import { useTeam } from '@/lib/TeamContext';
+import { QRCodeCard } from './QRCodeCard';
+import { getTransitDirectionsUrl } from '@/lib/geolocation';
 
 interface TriageExportModalProps {
   isOpen: boolean;
@@ -80,6 +82,138 @@ export function TriageExportModal({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadHtml = () => {
+    let htmlContent = '';
+    const title = exportMode === 'aktenvermerk' ? `Aktenvermerk_${caseId}` : `Klienten_Laufzettel_${todayStr.replace(/\./g, '-')}`;
+
+    if (exportMode === 'aktenvermerk') {
+      htmlContent = `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Aktenvermerk ${caseId} — Polaris</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 32px; color: #0f172a; max-width: 800px; margin: 0 auto; line-height: 1.5; font-size: 13px; }
+    h1 { font-size: 20px; font-weight: 900; margin: 0 0 4px; }
+    .header { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; }
+    .section { border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #f8fafc; }
+    .section-title { font-weight: bold; font-size: 11px; text-transform: uppercase; color: #475569; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .step { border: 1px solid #e2e8f0; background: #fff; padding: 12px; border-radius: 6px; margin-bottom: 8px; }
+    .signoff { display: flex; justify-content: space-between; margin-top: 36px; padding-top: 16px; border-top: 2px solid #0f172a; }
+    .line { border-bottom: 1px solid #94a3b8; height: 32px; width: 220px; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">${agencyName}</div>
+    <h1>SOZIALPÄDAGOGISCHES ERSTCLEARING & AKTENVERMERK</h1>
+    <div style="color: #475569;">Fall-ID: <strong>${caseId}</strong> • Datum: ${todayStr}, ${timeStr} Uhr • Fachkraft: ${caseworkerName}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">1. STAMMDATEN & FALLCHARAKTERISTIK</div>
+    <p>• Wohnsituation: <strong>${housingLabels[formData.housingStatus] || formData.housingStatus}</strong></p>
+    <p>• Dringlichkeit: <strong>${urgencyLabels[formData.urgency] || formData.urgency}</strong></p>
+    <p>• Aufenthaltsstatus: ${residenceLabels[formData.residenceStatus] || formData.residenceStatus}</p>
+    <p>• Bezirk: ${formData.district || 'Berlinweit'}</p>
+    <p>• Aktenvermerk / Kontext: ${formData.notes || 'Keine'}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2. SOZIALRECHTLICHE EINSCHÄTZUNG & RECHTSGRUNDLAGEN</div>
+    <p style="font-weight: 600; color: #1e3a8a;">${result.summary}</p>
+    <p style="margin-top: 6px; font-size: 11px; color: #475569;">${(result.legalContext || []).join(' • ')}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3. INTERVENTIONS- UND STUFENPLAN</div>
+    ${result.steps.map((s, idx) => `
+      <div class="step">
+        <strong style="color: #1e40af;">Stufe ${idx + 1}: ${s.title}</strong>
+        <p style="margin: 4px 0;">${s.action}</p>
+        ${s.requiredDocs && s.requiredDocs.length ? `<p style="font-size: 11px; color: #475569;"><strong>Unterlagen:</strong> ${s.requiredDocs.join(', ')}</p>` : ''}
+        ${s.matchedFacilities && s.matchedFacilities.length ? `<p style="font-size: 11px; color: #047857;"><strong>Anlaufstelle:</strong> ${s.matchedFacilities.map((f: any) => `${f.name} (${typeof f.address === 'string' ? f.address : f.address?.street || ''})`).join(', ')}</p>` : ''}
+      </div>
+    `).join('')}
+  </div>
+
+  <div class="signoff">
+    <div>
+      <div class="line"></div>
+      <div style="font-size: 10px; color: #64748b;">Datum & Handzeichen Fachkraft (${caseworkerName})</div>
+    </div>
+    <div>
+      <div class="line"></div>
+      <div style="font-size: 10px; color: #64748b;">Kenntnisnahme Leitung (${agencyName})</div>
+    </div>
+  </div>
+</body>
+</html>`;
+    } else {
+      htmlContent = `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Persönlicher Beratungs-Fahrplan</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; color: #0f172a; max-width: 800px; margin: 0 auto; line-height: 1.5; font-size: 14px; }
+    h1 { font-size: 24px; font-weight: 900; margin: 0 0 4px; }
+    .header { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; }
+    .step { border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #fff; }
+    .step-num { display: inline-block; background: #2563eb; color: #fff; width: 24px; height: 24px; border-radius: 999px; text-align: center; line-height: 24px; font-weight: bold; margin-right: 8px; font-size: 12px; }
+    .docs { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">POLARIS • Sozialarbeiter-Kompass Berlin</div>
+    <h1>Persönlicher Fahrplan für Ihre Beratung</h1>
+    <div style="color: #475569;">Datum: ${todayStr} • Bezirk: ${formData.district || 'Berlinweit'}</div>
+  </div>
+
+  ${result.steps.map((s, idx) => `
+    <div class="step">
+      <div><span class="step-num">${idx + 1}</span><strong>${s.title}</strong></div>
+      <p style="margin: 8px 0 0 32px;">${s.action}</p>
+      ${s.requiredDocs && s.requiredDocs.length ? `
+        <div class="docs" style="margin-left: 32px;">
+          <strong style="display:block; margin-bottom: 6px; font-size: 12px;">Bitte mitbringen (Checkliste):</strong>
+          ${s.requiredDocs.map(d => `<div style="margin-bottom: 4px;">☐ ${d}</div>`).join('')}
+        </div>
+      ` : ''}
+      ${s.matchedFacilities && s.matchedFacilities.length ? `
+        <div style="margin-left: 32px; margin-top: 10px;">
+          <strong style="font-size: 12px;">Hierhin können Sie sich wenden:</strong>
+          ${s.matchedFacilities.map((f: any) => `
+            <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; margin-top: 4px; font-size: 12px;">
+              <strong>${f.name}</strong><br>
+              📍 ${typeof f.address === 'string' ? f.address : f.address?.street || ''}, ${typeof f.address === 'object' ? f.address?.zipCode || '' : ''} Berlin<br>
+              ${f.contact?.phone ? `📞 Tel: ${f.contact.phone}` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `).join('')}
+
+  <div style="margin-top: 24px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center;">
+    Erstellt mit Polaris — Sozialarbeiter-Kompass Berlin
+  </div>
+</body>
+</html>`;
+    }
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, '_')}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleCopyText = async () => {
@@ -252,11 +386,20 @@ Wichtige Schritte für Sie:
               </button>
               <button
                 type="button"
+                onClick={handleDownloadHtml}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                title="Als eigenständige HTML-Datei für Dokumentenablage speichern"
+              >
+                <Download className="w-3.5 h-3.5 text-blue-400" />
+                <span>Datei speichern</span>
+              </button>
+              <button
+                type="button"
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Drucken / Als PDF speichern</span>
+                <span>Drucken / PDF</span>
               </button>
             </div>
           </div>
@@ -494,6 +637,30 @@ Wichtige Schritte für Sie:
                     <strong>Hinweis:</strong> Dieser Laufzettel fasst die nächsten Schritte für Sie zusammen. 
                     Bitte bringen Sie die abgehakten Dokumente zu den angegebenen Sprechzeiten mit.
                   </div>
+
+                  {/* QR Navigation Card for Client Smartphone */}
+                  {(() => {
+                    const primaryFacility = result.steps.find((s) => s.matchedFacilities && s.matchedFacilities.length > 0)?.matchedFacilities?.[0];
+                    if (!primaryFacility) return null;
+                    const addrStr = typeof primaryFacility.address === 'string' ? primaryFacility.address : primaryFacility.address?.street || '';
+                    return (
+                      <div className="mt-3 flex items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                        <div className="text-xs space-y-0.5">
+                          <strong className="text-slate-900 block font-bold">Wegbeschreibung für Ihr Smartphone:</strong>
+                          <span className="text-slate-600 text-[11px]">
+                            Direkte Navigation zur zuständigen Anlaufstelle (<strong>{primaryFacility.name}</strong>)
+                          </span>
+                        </div>
+                        <QRCodeCard
+                          value={getTransitDirectionsUrl(`${primaryFacility.name}, ${addrStr}, Berlin`)}
+                          label="Live-Navigation"
+                          sublabel="Scannen für Google Maps & ÖPNV"
+                          size={80}
+                          className="p-1 border-none bg-transparent shadow-none shrink-0"
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Steps for Client */}
