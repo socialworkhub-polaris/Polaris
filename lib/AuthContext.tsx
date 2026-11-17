@@ -9,7 +9,8 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, metadata?: Record<string, any>) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, metadata?: Record<string, any>) => Promise<{ user: User | null; session: any | null }>;
+  resendVerificationEmail: (email: string) => Promise<void>;
   updateProfile: (data: Record<string, any>) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -19,7 +20,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signInWithGoogle: async () => {},
   signInWithEmail: async () => {},
-  signUpWithEmail: async () => {},
+  signUpWithEmail: async () => ({ user: null, session: null }),
+  resendVerificationEmail: async () => {},
   updateProfile: async () => {},
   logout: async () => {},
 });
@@ -65,11 +67,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUpWithEmail = async (email: string, pass: string, metadata?: Record<string, any>) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password: pass,
       options: {
         data: metadata,
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}` : undefined,
+      },
+    });
+    if (error) throw error;
+    return { user: data.user, session: data.session };
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}` : undefined,
       },
     });
     if (error) throw error;
@@ -97,6 +112,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
+        resendVerificationEmail,
         updateProfile,
         logout,
       }}

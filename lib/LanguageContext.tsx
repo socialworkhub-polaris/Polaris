@@ -49,6 +49,9 @@ export const translations = {
     // Feedback & Newsletter
     giveFeedback: 'Feedback geben',
     newsletter: 'Newsletter',
+    updatesAndNews: 'Updates & News',
+    subscribeNewsletter: 'Newsletter abonnieren',
+    whatsNew: 'Neuigkeiten in Polaris',
   },
   en: {
     // Header
@@ -94,6 +97,9 @@ export const translations = {
     // Feedback & Newsletter
     giveFeedback: 'Send Feedback',
     newsletter: 'Newsletter',
+    updatesAndNews: 'Updates & News',
+    subscribeNewsletter: 'Subscribe to Newsletter',
+    whatsNew: 'What\'s New in Polaris',
   },
 };
 

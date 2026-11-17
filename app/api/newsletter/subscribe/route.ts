@@ -15,7 +15,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await subscribeContact({ email });
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const customAttributes = typeof body.attributes === 'object' && body.attributes !== null ? body.attributes : {};
+
+    const attributes: Record<string, string | number | boolean> = {
+      ...customAttributes,
+    };
+    if (name) {
+      attributes.FIRSTNAME = name;
+      attributes.VORNAME = name;
+    }
+
+    const result = await subscribeContact({ email, attributes });
 
     return NextResponse.json({
       success: true,

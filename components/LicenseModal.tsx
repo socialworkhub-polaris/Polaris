@@ -45,6 +45,12 @@ export default function LicenseModal({ isOpen, onClose, onOpenTeamModal }: Licen
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [redeemMsg, setRedeemMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const isCurrentOrgActive = !!currentOrganization && (
+    currentOrganization.subscriptionStatus === 'active' ||
+    (currentOrganization.subscriptionStatus === 'trialing' &&
+      (!currentOrganization.trialEndsAt || new Date(currentOrganization.trialEndsAt) > new Date()))
+  );
+
   if (!isOpen) return null;
 
   const mailSubjectInquiry = encodeURIComponent('Frage zu Funktionen, Preisen oder Kauf auf Rechnung (Polaris)');
@@ -254,83 +260,110 @@ Mit freundlichen Grüßen,
 
             {/* Bottom Half: Seamless Integrated Direct Purchase Section */}
             <div className="p-5 bg-slate-900/90 border-t border-slate-700/80 space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-white">
-                    Direkt online aktivieren
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-400">
-                  SEPA-Lastschrift oder Firmenkreditkarte
-                </span>
-              </div>
-
-              {/* Team Name Input if not selected yet */}
-              {!currentOrganization ? (
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-200">
-                    Name deiner Einrichtung oder deines Teams:
-                  </label>
-                  <input
-                    type="text"
-                    value={teamNameInput}
-                    onChange={(e) => setTeamNameInput(e.target.value)}
-                    placeholder="z.B. Jugendwohngruppe Neukölln oder Krisenteam Mitte"
-                    className="w-full text-xs px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-500"
-                  />
+              {isCurrentOrgActive ? (
+                <div className="p-4 rounded-xl bg-emerald-950/50 border border-emerald-500/40 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <span>Dein Team hat bereits eine aktive Team-Lizenz!</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Für <strong>{currentOrganization?.name}</strong> ist die volle Polaris Team-Lizenz freigeschaltet (inklusive geteilter Notizen, Schwarzem Brett und unbegrenzten KI-Triagen).
+                  </p>
+                  {onOpenTeamModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenTeamModal();
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow transition cursor-pointer"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Team-Einstellungen & Rechnungen öffnen</span>
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs flex items-center justify-between">
-                  <span className="text-slate-300">
-                    Lizenz für Team: <strong className="text-emerald-400">{currentOrganization.name}</strong>
-                  </span>
-                  <span className="text-[11px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
-                    Code: {currentOrganization.inviteCode}
-                  </span>
-                </div>
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-white">
+                        Direkt online aktivieren
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      SEPA-Lastschrift oder Firmenkreditkarte
+                    </span>
+                  </div>
+
+                  {/* Team Name Input if not selected yet */}
+                  {!currentOrganization ? (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-slate-200">
+                        Name deiner Einrichtung oder deines Teams:
+                      </label>
+                      <input
+                        type="text"
+                        value={teamNameInput}
+                        onChange={(e) => setTeamNameInput(e.target.value)}
+                        placeholder="z.B. Jugendwohngruppe Neukölln oder Krisenteam Mitte"
+                        className="w-full text-xs px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-500"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs flex items-center justify-between">
+                      <span className="text-slate-300">
+                        Lizenz für Team: <strong className="text-emerald-400">{currentOrganization.name}</strong>
+                      </span>
+                      <span className="text-[11px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                        Code: {currentOrganization.inviteCode}
+                      </span>
+                    </div>
+                  )}
+
+                  {checkoutError && (
+                    <div className="p-3 bg-red-950/40 border border-red-800/60 text-red-300 rounded-xl text-xs">
+                      {checkoutError}
+                    </div>
+                  )}
+
+                  {/* Primary Buy Button */}
+                  <button
+                    type="button"
+                    onClick={handleOnlineCheckout}
+                    disabled={checkoutLoading}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {checkoutLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Öffne sichere Kasse...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4" />
+                        <span>Team-Lizenz jetzt buchen (89 € / Monat)</span>
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </>
+                    )}
+                  </button>
+
+                  <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                    <div className="flex items-center justify-between text-slate-300 font-semibold text-[10px] sm:text-[11px]">
+                      <span>89,00 € / Monat (inkl. 19 % MwSt. – 74,79 € netto)</span>
+                      <span className="text-emerald-400">Monatlich kündbar</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      ⚖️ <strong>B2B-Angebot:</strong> Vertragsschluss ausschließlich für Träger, juristische Personen, Behörden und Fachkräfte (§ 14 BGB). Gemäß § 312g Abs. 1 BGB besteht kein Widerrufsrecht für gewerbliche Kunden.
+                    </p>
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 text-center">
+                    🔒 Verschlüsselte Stripe-Zahlung • SEPA-Lastschrift & Kreditkarte • Rechnungen nach § 14 UStG mit USt-Ausweis
+                  </p>
+                </>
               )}
-
-              {checkoutError && (
-                <div className="p-3 bg-red-950/40 border border-red-800/60 text-red-300 rounded-xl text-xs">
-                  {checkoutError}
-                </div>
-              )}
-
-              {/* Primary Buy Button */}
-              <button
-                type="button"
-                onClick={handleOnlineCheckout}
-                disabled={checkoutLoading}
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all cursor-pointer disabled:opacity-50"
-              >
-                {checkoutLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Öffne sichere Kasse...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4" />
-                    <span>Team-Lizenz jetzt buchen (89 € / Monat)</span>
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </>
-                )}
-              </button>
-
-              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <div className="flex items-center justify-between text-slate-300 font-semibold text-[10px] sm:text-[11px]">
-                  <span>89,00 € / Monat (inkl. 19 % MwSt. – 74,79 € netto)</span>
-                  <span className="text-emerald-400">Monatlich kündbar</span>
-                </div>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  ⚖️ <strong>B2B-Angebot:</strong> Vertragsschluss ausschließlich für Träger, juristische Personen, Behörden und Fachkräfte (§ 14 BGB). Gemäß § 312g Abs. 1 BGB besteht kein Widerrufsrecht für gewerbliche Kunden.
-                </p>
-              </div>
-
-              <p className="text-[10px] text-slate-400 text-center">
-                🔒 Verschlüsselte Stripe-Zahlung • SEPA-Lastschrift & Kreditkarte • Rechnungen nach § 14 UStG mit USt-Ausweis
-              </p>
             </div>
 
           </div>
@@ -338,83 +371,85 @@ Mit freundlichen Grüßen,
           {/* ========================================================================= */}
           {/* OPTION 2: 14-DAY FREE PILOT (PROMINENT AMBER BOX)                         */}
           {/* ========================================================================= */}
-          <div className="p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-slate-800/60 border-2 border-amber-500/40 rounded-2xl space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-300">
-                  <Sparkles className="w-4 h-4" />
+          {!isCurrentOrgActive && (
+            <div className="p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-slate-800/60 border-2 border-amber-500/40 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-300">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-white tracking-wide">
+                    Option 2: 14 Tage kostenlos im Team testen
+                  </h3>
                 </div>
-                <h3 className="text-sm font-extrabold text-white tracking-wide">
-                  Option 2: 14 Tage kostenlos im Team testen
-                </h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                  Empfohlen für neue Teams
+                </span>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                Empfohlen für neue Teams
-              </span>
+
+              <p className="text-xs text-amber-100/90 leading-relaxed">
+                Erprobe alle Team-Features (unbegrenzte Triagen, Team-Notizen & Hub) unverbindlich in deinem Arbeitsalltag mit bis zu 10 Kolleg*innen.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-amber-300">
+                <span className="inline-flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 text-amber-400" />
+                  Keine Zahlungsdaten erforderlich
+                </span>
+                <span>•</span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  Endet automatisch (kein Abo)
+                </span>
+              </div>
+
+              <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <a
+                  href={trialMailto}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-colors shadow-sm text-center"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Kostenlosen Pilot-Code anfordern (E-Mail)</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCodeInput(!showCodeInput)}
+                  className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition-colors text-center cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5 inline mr-1 text-amber-400" />
+                  <span>{showCodeInput ? 'Feld schließen' : 'Code einlösen'}</span>
+                </button>
+              </div>
+
+              {/* Code Redemption Input */}
+              {showCodeInput && (
+                <form onSubmit={handleRedeemCode} className="pt-2 space-y-2 animate-in fade-in">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={trialCode}
+                      onChange={(e) => setTrialCode(e.target.value)}
+                      placeholder="z.B. TEST-PILOT-2026"
+                      className="flex-1 uppercase font-mono text-xs px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-amber-400"
+                    />
+                    <button
+                      type="submit"
+                      disabled={redeemLoading || !trialCode.trim()}
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl disabled:opacity-50 transition-colors cursor-pointer"
+                    >
+                      {redeemLoading ? '...' : 'Aktivieren'}
+                    </button>
+                  </div>
+                  {redeemMsg && (
+                    <p className={`text-[11px] font-semibold ${redeemMsg.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {redeemMsg.text}
+                    </p>
+                  )}
+                </form>
+              )}
             </div>
-
-            <p className="text-xs text-amber-100/90 leading-relaxed">
-              Erprobe alle Team-Features (unbegrenzte Triagen, Team-Notizen & Hub) unverbindlich in deinem Arbeitsalltag mit bis zu 10 Kolleg*innen.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-amber-300">
-              <span className="inline-flex items-center gap-1">
-                <Check className="w-3.5 h-3.5 text-amber-400" />
-                Keine Zahlungsdaten erforderlich
-              </span>
-              <span>•</span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                Endet automatisch (kein Abo)
-              </span>
-            </div>
-
-            <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <a
-                href={trialMailto}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-colors shadow-sm text-center"
-              >
-                <Mail className="w-4 h-4" />
-                <span>Kostenlosen Pilot-Code anfordern (E-Mail)</span>
-              </a>
-
-              <button
-                type="button"
-                onClick={() => setShowCodeInput(!showCodeInput)}
-                className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition-colors text-center cursor-pointer"
-              >
-                <KeyRound className="w-3.5 h-3.5 inline mr-1 text-amber-400" />
-                <span>{showCodeInput ? 'Feld schließen' : 'Code einlösen'}</span>
-              </button>
-            </div>
-
-            {/* Code Redemption Input */}
-            {showCodeInput && (
-              <form onSubmit={handleRedeemCode} className="pt-2 space-y-2 animate-in fade-in">
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    value={trialCode}
-                    onChange={(e) => setTrialCode(e.target.value)}
-                    placeholder="z.B. TEST-PILOT-2026"
-                    className="flex-1 uppercase font-mono text-xs px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-amber-400"
-                  />
-                  <button
-                    type="submit"
-                    disabled={redeemLoading || !trialCode.trim()}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl disabled:opacity-50 transition-colors cursor-pointer"
-                  >
-                    {redeemLoading ? '...' : 'Aktivieren'}
-                  </button>
-                </div>
-                {redeemMsg && (
-                  <p className={`text-[11px] font-semibold ${redeemMsg.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {redeemMsg.text}
-                  </p>
-                )}
-              </form>
-            )}
-          </div>
+          )}
 
           {/* ========================================================================= */}
           {/* OPTION 3: INQUIRIES & OFFICIAL B2B PURCHASE ORDERS                         */}

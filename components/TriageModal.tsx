@@ -50,6 +50,7 @@ export default function TriageModal({ isOpen, onClose }: TriageModalProps) {
   const [authEmail, setAuthEmail] = useState('');
   const [authPass, setAuthPass] = useState('');
   const [authName, setAuthName] = useState('');
+  const [authNewsletter, setAuthNewsletter] = useState(true);
   const [isAuthRegister, setIsAuthRegister] = useState(true);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -663,7 +664,23 @@ const handlePrint = () => {
                         if (isAuthRegister) {
                           await signUpWithEmail(authEmail, authPass, {
                             full_name: authName.trim() || undefined,
+                            newsletter_opt_in: authNewsletter,
+                            newsletter_opt_in_at: authNewsletter ? new Date().toISOString() : undefined,
                           });
+
+                          if (authNewsletter) {
+                            fetch('/api/newsletter/subscribe', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                email: authEmail.trim().toLowerCase(),
+                                name: authName.trim() || undefined,
+                                attributes: {
+                                  SOURCE: 'triage_signup_opt_in',
+                                },
+                              }),
+                            }).catch((err) => console.warn('Newsletter subscribe failed:', err));
+                          }
                         } else {
                           await signInWithEmail(authEmail, authPass);
                         }
@@ -709,6 +726,22 @@ const handlePrint = () => {
                         className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-blue-600 focus:outline-none"
                       />
                     </div>
+
+                    {isAuthRegister && (
+                      <div className="pt-0.5">
+                        <label className="flex items-start gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={authNewsletter}
+                            onChange={(e) => setAuthNewsletter(e.target.checked)}
+                            className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-[10px] text-slate-600 leading-tight">
+                            Kostenlosen Praxis-Newsletter erhalten (Kältehilfe & SGB-Updates). Jederzeit kündbar.
+                          </span>
+                        </label>
+                      </div>
+                    )}
 
                     <button
                       type="submit"

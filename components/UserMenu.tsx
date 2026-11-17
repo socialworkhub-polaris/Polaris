@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useTeam } from '../lib/TeamContext';
-import { LogIn, LogOut, User as UserIcon, X, Building2, Briefcase, MapPin, Check, Edit2, Users } from 'lucide-react';
+import { LogIn, LogOut, User as UserIcon, X, Building2, Briefcase, MapPin, Check, Edit2, Users, Mail, CheckCircle2, RotateCw, ArrowRight } from 'lucide-react';
 import { BERLIN_DISTRICTS } from '@/data/districts';
 import { TeamModal } from './TeamModal';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -20,7 +20,7 @@ const WORK_AREAS = [
 ];
 
 export default function UserMenu() {
-  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, updateProfile, logout } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, updateProfile, logout } = useAuth();
   const { currentOrganization } = useTeam();
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -35,10 +35,15 @@ export default function UserMenu() {
   const [facility, setFacility] = useState('');
   const [workArea, setWorkArea] = useState('Keine Angabe / Prefer not to share');
   const [district, setDistrict] = useState('Keine Angabe / Prefer not to share');
+  const [newsletterOptIn, setNewsletterOptIn] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmationSentEmail, setConfirmationSentEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
 
   React.useEffect(() => {
     const handleOpenAuth = () => {
@@ -58,27 +63,93 @@ export default function UserMenu() {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMsg(null);
+    setResendSuccess(false);
+    setUnconfirmedEmail(null);
     setSubmitting(true);
     try {
       if (isRegister) {
-        await signUpWithEmail(email, password, {
+        const { user: registeredUser, session } = await signUpWithEmail(email, password, {
           full_name: fullName.trim() || undefined,
           facility: facility.trim() || 'Keine Angabe',
           work_area: workArea,
           district: district,
+          newsletter_opt_in: newsletterOptIn,
+          newsletter_opt_in_at: newsletterOptIn ? new Date().toISOString() : undefined,
         });
+
+        if (newsletterOptIn) {
+          fetch('/api/newsletter/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email.trim().toLowerCase(),
+              name: fullName.trim() || undefined,
+              attributes: {
+                FACILITY: facility.trim() || undefined,
+                WORK_AREA: workArea,
+                DISTRICT: district,
+                SOURCE: 'signup_opt_in',
+              },
+            }),
+          }).catch((err) => console.warn('Newsletter subscribe on signup failed:', err));
+        }
+
+        // Check if an email confirmation is required:
+        if (!session) {
+          if (registeredUser && registeredUser.identities && registeredUser.identities.length === 0) {
+            setError('Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.');
+            setIsRegister(false);
+            return;
+          }
+          setConfirmationSentEmail(email);
+          return;
+        }
+
+        // If session exists immediately (email confirmation disabled in Supabase)
+        setIsOpen(false);
+        setEmail('');
+        setPassword('');
+        setFullName('');
+        setFacility('');
       } else {
         await signInWithEmail(email, password);
+        setIsOpen(false);
+        setEmail('');
+        setPassword('');
       }
-      setIsOpen(false);
-      setEmail('');
-      setPassword('');
-      setFullName('');
-      setFacility('');
     } catch (err: any) {
-      setError(err.message || 'Authentifizierungsfehler');
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('email not confirmed')) {
+        setError('Deine E-Mail-Adresse wurde noch nicht bestätigt. Bitte klicke auf den Bestätigungslink in deiner E-Mail.');
+        setUnconfirmedEmail(email);
+      } else if (msg.toLowerCase().includes('invalid login credentials')) {
+        setError('Ungültige E-Mail-Adresse oder Passwort. Bitte überprüfe deine Eingaben.');
+      } else if (msg.toLowerCase().includes('user already registered')) {
+        setError('Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.');
+        setIsRegister(false);
+      } else if (msg.toLowerCase().includes('password should be at least')) {
+        setError('Das Passwort muss mindestens 6 Zeichen lang sein.');
+      } else {
+        setError(msg || 'Authentifizierungsfehler');
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResendConfirmation = async (targetEmail: string) => {
+    if (!targetEmail) return;
+    setResending(true);
+    setError(null);
+    try {
+      await resendVerificationEmail(targetEmail);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 6000);
+    } catch (err: any) {
+      setError(err.message || 'Fehler beim erneuten Senden der Bestätigungs-E-Mail.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -102,7 +173,27 @@ export default function UserMenu() {
         facility: facility.trim() || 'Keine Angabe',
         work_area: workArea,
         district: district,
+        newsletter_opt_in: newsletterOptIn,
+        newsletter_opt_in_at: newsletterOptIn ? (user?.user_metadata?.newsletter_opt_in_at || new Date().toISOString()) : undefined,
       });
+
+      if (newsletterOptIn && user?.email) {
+        fetch('/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            name: fullName.trim() || undefined,
+            attributes: {
+              FACILITY: facility.trim() || undefined,
+              WORK_AREA: workArea,
+              DISTRICT: district,
+              SOURCE: 'profile_update',
+            },
+          }),
+        }).catch((err) => console.warn('Newsletter subscribe failed:', err));
+      }
+
       setSuccessMsg('Profil erfolgreich gespeichert!');
       setTimeout(() => {
         setSuccessMsg(null);
@@ -121,6 +212,9 @@ export default function UserMenu() {
       setFacility(user.user_metadata.facility || '');
       setWorkArea(user.user_metadata.work_area || 'Keine Angabe / Prefer not to share');
       setDistrict(user.user_metadata.district || 'Keine Angabe / Prefer not to share');
+      setNewsletterOptIn(!!user.user_metadata.newsletter_opt_in);
+    } else {
+      setNewsletterOptIn(false);
     }
     setError(null);
     setSuccessMsg(null);
@@ -131,7 +225,13 @@ export default function UserMenu() {
     return (
       <>
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true);
+            setError(null);
+            setConfirmationSentEmail(null);
+            setUnconfirmedEmail(null);
+            setResendSuccess(false);
+          }}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-xs font-semibold transition-all shadow-sm hover:shadow cursor-pointer shrink-0"
         >
           <LogIn className="w-3.5 h-3.5 text-blue-600" />
@@ -145,24 +245,97 @@ export default function UserMenu() {
                 onClick={() => {
                   setIsOpen(false);
                   setError(null);
+                  setConfirmationSentEmail(null);
+                  setUnconfirmedEmail(null);
+                  setResendSuccess(false);
                 }}
-                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
 
-              <h2 className="text-base font-bold text-slate-900 mb-1">
-                {isRegister ? 'Fachkraft-Konto für Polaris erstellen' : 'Bei Polaris anmelden'}
-              </h2>
-              <p className="text-xs text-slate-500 mb-4">
-                Verwalte Favoriten, synchronisiere Notizen und nutze Triage im Team.
-              </p>
+              {confirmationSentEmail ? (
+                <div className="text-center py-2">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center mb-3">
+                    <Mail className="w-6 h-6 text-blue-600" />
+                  </div>
 
-              {error && (
-                <div className="mb-3 rounded-lg bg-red-50 p-2.5 text-xs text-red-600 border border-red-200">
-                  {error}
+                  <h2 className="text-base font-bold text-slate-900 mb-1">
+                    Bestätigungs-E-Mail gesendet!
+                  </h2>
+                  <p className="text-xs text-slate-600 mb-4 max-w-sm mx-auto">
+                    Wir haben einen Aktivierungslink an <strong className="text-slate-900 font-semibold">{confirmationSentEmail}</strong> gesendet.
+                    Bitte klicke auf den Link in der E-Mail, um dein Fachkraft-Konto freizuschalten.
+                  </p>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] text-slate-600 mb-4 text-left">
+                    <p className="font-semibold text-slate-800 mb-1">Keine E-Mail angekommen?</p>
+                    <ul className="list-disc list-inside space-y-0.5 text-slate-500">
+                      <li>Bitte überprüfe auch deinen <strong>Spam- oder Junk-Ordner</strong>.</li>
+                      <li>Manche Träger-Server filtern neue Absender kurz vor der Zustellung.</li>
+                    </ul>
+                  </div>
+
+                  {resendSuccess && (
+                    <div className="mb-3 rounded-lg bg-emerald-50 p-2.5 text-xs text-emerald-700 border border-emerald-200 flex items-center justify-center gap-1.5 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Bestätigungslink wurde erneut gesendet!</span>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="mb-3 rounded-lg bg-red-50 p-2.5 text-xs text-red-600 border border-red-200">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={resending || resendSuccess}
+                      onClick={() => handleResendConfirmation(confirmationSentEmail)}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 cursor-pointer shadow-xs"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                      <span>{resending ? 'Sende erneut...' : 'E-Mail erneut senden'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmationSentEmail(null);
+                        setIsRegister(false);
+                        setError(null);
+                        setUnconfirmedEmail(null);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition shadow-sm cursor-pointer"
+                    >
+                      <span>Bereits bestätigt? Zum Login</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              )}
+              ) : (
+                <>
+                  <h2 className="text-base font-bold text-slate-900 mb-1">
+                    {isRegister ? 'Fachkraft-Konto für Polaris erstellen' : 'Bei Polaris anmelden'}
+                  </h2>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Verwalte Favoriten, synchronisiere Notizen und nutze Triage im Team.
+                  </p>
+
+                  {resendSuccess && (
+                    <div className="mb-3 rounded-lg bg-emerald-50 p-2.5 text-xs text-emerald-700 border border-emerald-200 flex items-center gap-1.5 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Bestätigungs-E-Mail wurde erfolgreich erneut gesendet!</span>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="mb-3 rounded-lg bg-red-50 p-2.5 text-xs text-red-600 border border-red-200">
+                      {error}
+                    </div>
+                  )}
 
               {/* Google Button */}
               <button
@@ -292,10 +465,31 @@ export default function UserMenu() {
                   />
                 </div>
 
+                {isRegister && (
+                  <div className="pt-1">
+                    <label className="flex items-start gap-2.5 cursor-pointer text-slate-700 select-none">
+                      <input
+                        type="checkbox"
+                        checked={newsletterOptIn}
+                        onChange={(e) => setNewsletterOptIn(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <div className="text-[11px] leading-tight">
+                        <span className="font-semibold text-slate-800">
+                          Newsletter für Soziale Arbeit abonnieren
+                        </span>
+                        <p className="text-[10px] text-slate-500 mt-0.5 leading-normal">
+                          Monatliche Updates zu Kältehilfe, neuen Hilfsangeboten & SGB-Rechtsänderungen in Berlin. Jederzeit mit 1 Klick abbestellbar.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full mt-2 rounded-lg bg-slate-900 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 transition shadow-sm"
+                  className="w-full mt-2 rounded-lg bg-slate-900 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 transition shadow-sm cursor-pointer"
                 >
                   {submitting
                     ? 'Verarbeite...'
@@ -303,6 +497,20 @@ export default function UserMenu() {
                     ? 'Kostenlos registrieren'
                     : 'Anmelden'}
                 </button>
+
+                {unconfirmedEmail && (
+                  <div className="pt-1 text-center">
+                    <button
+                      type="button"
+                      disabled={resending}
+                      onClick={() => handleResendConfirmation(unconfirmedEmail)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      <RotateCw className={`w-3 h-3 ${resending ? 'animate-spin' : ''}`} />
+                      <span>{resending ? 'Sende erneut...' : 'Bestätigungs-E-Mail jetzt erneut senden'}</span>
+                    </button>
+                  </div>
+                )}
               </form>
 
               <div className="mt-4 text-center">
@@ -311,14 +519,18 @@ export default function UserMenu() {
                   onClick={() => {
                     setIsRegister(!isRegister);
                     setError(null);
+                    setUnconfirmedEmail(null);
+                    setResendSuccess(false);
                   }}
-                  className="text-xs text-slate-600 hover:text-slate-900 font-medium underline"
+                  className="text-xs text-slate-600 hover:text-slate-900 font-medium underline cursor-pointer"
                 >
                   {isRegister
                     ? 'Bereits registriert? Hier anmelden'
                     : 'Noch kein Konto? Jetzt registrieren'}
                 </button>
               </div>
+            </>
+          )}
             </div>
           </div>
         )}
@@ -453,6 +665,25 @@ export default function UserMenu() {
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer text-slate-300 select-none bg-slate-800/60 p-2.5 rounded-lg border border-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={newsletterOptIn}
+                    onChange={(e) => setNewsletterOptIn(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <div className="text-[11px] leading-tight">
+                    <span className="font-semibold text-white">
+                      Social Work Hub Newsletter abonnieren
+                    </span>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">
+                      Monatliche Fachinfos, Kältehilfe-Updates und Neuerungen in Berlin. Jederzeit abbestellbar.
+                    </p>
+                  </div>
+                </label>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
