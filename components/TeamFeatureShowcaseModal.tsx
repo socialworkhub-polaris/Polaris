@@ -173,14 +173,20 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
               <div className="flex items-center gap-2 min-w-0">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span className="truncate">
-                  Du bist im Team <strong>{currentOrganization?.name}</strong>. Die Team-Lizenz ist derzeit inaktiv.
+                  {currentOrganization?.trialEndsAt && new Date(currentOrganization.trialEndsAt) <= new Date() ? (
+                    <>Testphase für <strong>{currentOrganization?.name}</strong> abgelaufen. Daten sicher archiviert.</>
+                  ) : (
+                    <>Du bist im Team <strong>{currentOrganization?.name}</strong>. Die Team-Lizenz ist derzeit inaktiv.</>
+                  )}
                 </span>
               </div>
               <button
-                onClick={handleStartTrial}
+                onClick={handleStartCheckout}
                 className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold text-[11px] border border-amber-400/30 transition cursor-pointer shrink-0"
               >
-                14 Tage aktivieren
+                {currentOrganization?.trialEndsAt && new Date(currentOrganization.trialEndsAt) <= new Date()
+                  ? 'Team reaktivieren'
+                  : 'Lizenz freischalten'}
               </button>
             </div>
           )}
