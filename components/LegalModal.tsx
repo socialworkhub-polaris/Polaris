@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { X, ShieldCheck, FileText, AlertTriangle, ExternalLink } from 'lucide-react';
 import AVVModal from '@/components/AVVModal';
@@ -19,11 +19,23 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   const [activeTab, setActiveTab] = useState<'dsgvo' | 'disclaimer' | 'impressum'>(defaultTab);
   const [isAvvOpen, setIsAvvOpen] = useState(false);
 
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
@@ -165,14 +177,25 @@ export const LegalModal: React.FC<LegalModalProps> = ({
         {/* Footer */}
         <div className="p-3.5 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-3 text-[11px]">
-            <Link
-              href="/datenschutz"
-              target="_blank"
-              className="text-blue-600 hover:underline inline-flex items-center gap-1 font-medium"
+            <button
+              type="button"
+              onClick={() => setActiveTab('dsgvo')}
+              className={`hover:underline cursor-pointer font-medium ${
+                activeTab === 'dsgvo' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
             >
-              Vollständige Datenschutzerklärung
-              <ExternalLink className="w-3 h-3" />
-            </Link>
+              Datenschutz &amp; DSGVO
+            </button>
+            <span className="text-slate-300">·</span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('impressum')}
+              className={`hover:underline cursor-pointer font-medium ${
+                activeTab === 'impressum' ? 'text-blue-600 font-bold' : 'text-slate-600'
+              }`}
+            >
+              Impressum
+            </button>
             <span className="text-slate-300">·</span>
             <button
               type="button"
@@ -181,14 +204,6 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             >
               AVV-Mustervertrag (Art. 28 DSGVO)
             </button>
-            <span className="text-slate-300">·</span>
-            <Link
-              href="/impressum"
-              target="_blank"
-              className="text-slate-600 hover:underline"
-            >
-              Impressum
-            </Link>
           </div>
           <button
             type="button"
