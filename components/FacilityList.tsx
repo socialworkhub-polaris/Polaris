@@ -146,7 +146,7 @@ export const FacilityList: React.FC<FacilityListProps> = ({
                   onChange={(e) => setSortBy(e.target.value as 'default' | 'name' | 'district')}
                   className="bg-white border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-xs"
                 >
-                  <option value="default">Standard (Relevanz)</option>
+                  <option value="default">{userLocation ? 'Entfernung (GPS)' : 'Standard (Relevanz)'}</option>
                   <option value="name">Name (A–Z)</option>
                   <option value="district">Bezirk (A–Z)</option>
                 </select>
