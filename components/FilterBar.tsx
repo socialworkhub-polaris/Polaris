@@ -20,10 +20,12 @@ import {
   ChevronDown,
   SlidersHorizontal,
   RotateCcw,
+  Compass,
 } from 'lucide-react';
 import { FilterState, InstitutionType, AccessType, PrimaryFocus, BerlinDistrict, AgeGroup } from '@/types/facility';
 import { BERLIN_DISTRICTS, PRIMARY_FOCUS_OPTIONS, AGE_GROUP_OPTIONS, COMMON_LANGUAGES } from '@/data/districts';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useBookmarks } from '@/lib/useBookmarks';
 
 export const isKaeltehilfeSeason = (): boolean => {
   // Berliner Kältehilfe läuft offiziell vom 1. Oktober bis zum 30. April
@@ -65,6 +67,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const toggleExpanded = onToggleExpanded || (() => setInternalExpanded(!internalExpanded));
 
   const { t } = useLanguage();
+  const { bookmarkedIds } = useBookmarks();
+  const bookmarkCount = bookmarkedIds ? bookmarkedIds.length : 0;
   const isSeasonalKaeltehilfe = isKaeltehilfeSeason();
 
   // Zähle aktive Filter im erweiterten Bereich
@@ -118,162 +122,222 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   return (
     <div className="bg-white border-b border-slate-200">
-      <div className="p-3 sm:p-3.5 space-y-2.5">
-        {/* Zeile 1: Freitextsuche + GPS-Nähe + Favoriten */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={filterState.searchQuery}
-              onChange={handleSearchChange}
-              placeholder={t.searchPlaceholder}
-              className="w-full h-9 pl-9 pr-8 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all"
-            />
+      <div className="p-3 sm:p-3.5 space-y-2">
+        {/* Zeile 1: Breite Suchleiste mit integrierten Sofort-Triggern (GPS & Favoriten) */}
+        <div className="relative flex items-center">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={filterState.searchQuery}
+            onChange={handleSearchChange}
+            placeholder={t.searchPlaceholder}
+            className="w-full h-9 pl-9 pr-24 sm:pr-28 text-xs sm:text-sm bg-slate-50/90 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-lg placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
+          />
+
+          {/* Rechts integrierte Inline-Aktionen */}
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {filterState.searchQuery && (
               <button
                 type="button"
                 onClick={() => onChange({ ...filterState, searchQuery: '' })}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded cursor-pointer transition-colors"
                 title="Suchfeld leeren"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+
+            {/* GPS / In meiner Nähe Icon-Button */}
+            {onToggleNearby && (
+              <button
+                type="button"
+                onClick={onToggleNearby}
+                disabled={isLocating}
+                className={`inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 ${
+                  userLocation
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+                title={
+                  userLocation
+                    ? 'Standort-Sortierung aktiv (Klicken zum Deaktivieren)'
+                    : 'Aktuellen Standort ermitteln & Einrichtungen nach Entfernung sortieren'
+                }
+              >
+                {isLocating ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                ) : (
+                  <Navigation className={`w-3.5 h-3.5 ${userLocation ? 'fill-white text-white' : 'text-blue-600'}`} />
+                )}
+                <span className="hidden sm:inline text-[11px]">
+                  {isLocating ? '...' : 'Nähe'}
+                </span>
+              </button>
+            )}
+
+            {/* Favoriten / Merkliste Icon-Button */}
+            {onToggleBookmarks && (
+              <button
+                type="button"
+                onClick={onToggleBookmarks}
+                className={`inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                  showOnlyBookmarks
+                    ? 'bg-amber-500 text-white shadow-xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+                title={showOnlyBookmarks ? 'Alle Einrichtungen anzeigen' : 'Nur gemerkte Favoriten anzeigen'}
+              >
+                <Bookmark className={`w-3.5 h-3.5 ${showOnlyBookmarks ? 'fill-white text-white' : 'text-amber-500'}`} />
+                {bookmarkCount > 0 && (
+                  <span className={`text-[11px] font-bold ${showOnlyBookmarks ? 'text-white' : 'text-amber-700'}`}>
+                    {bookmarkCount}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
-
-          {/* GPS / In meiner Nähe Button */}
-          {onToggleNearby && (
-            <button
-              type="button"
-              onClick={onToggleNearby}
-              disabled={isLocating}
-              className={`inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg border transition-all shrink-0 cursor-pointer disabled:opacity-60 ${
-                userLocation
-                  ? 'bg-blue-600 text-white border-blue-700 shadow-xs ring-2 ring-blue-400/30'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-              title={
-                userLocation
-                  ? 'Standort-Sortierung aktiv (Klicken zum Deaktivieren)'
-                  : 'Aktuellen Standort ermitteln & Einrichtungen nach Entfernung sortieren'
-              }
-            >
-              {isLocating ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-              ) : (
-                <Navigation className={`w-3.5 h-3.5 ${userLocation ? 'fill-white text-white' : 'text-blue-600'}`} />
-              )}
-              <span className="hidden sm:inline">
-                {isLocating ? 'Lokalisiere...' : userLocation ? 'In der Nähe (Aktiv)' : 'In der Nähe'}
-              </span>
-            </button>
-          )}
-
-          {/* Favoriten Filter */}
-          {onToggleBookmarks && (
-            <button
-              type="button"
-              onClick={onToggleBookmarks}
-              className={`inline-flex items-center gap-1.5 h-9 px-3 text-xs font-medium rounded-lg border transition-all shrink-0 cursor-pointer ${
-                showOnlyBookmarks
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs font-semibold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-              title={showOnlyBookmarks ? 'Alle Einrichtungen anzeigen' : 'Nur gemerkte Favoriten anzeigen'}
-            >
-              <Bookmark className={`w-3.5 h-3.5 ${showOnlyBookmarks ? 'fill-white text-white' : 'text-amber-500'}`} />
-              <span className="hidden sm:inline">{t.favorites}</span>
-            </button>
-          )}
         </div>
 
-        {/* Zeile 2: Smart Filter-Leiste (Bezirk, Schwerpunkt, Walk-In, Kältehilfe, Mehr Filter) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {/* Bezirk-Filter (Direkt verbunden mit der Karte) */}
-          <div className="relative min-w-[130px] sm:min-w-[155px] flex-1 sm:flex-initial">
-            <MapPin className="w-3.5 h-3.5 text-blue-600 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {/* Zeile 2: Einheitliche Pill-Chips (Wie Google Maps / Airbnb) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 scroll-smooth">
+          {/* 1. Bezirk-Pill (Karten-Zentrierung & Highlight) */}
+          <div className="relative shrink-0 inline-flex items-center group">
+            <div
+              className={`h-7 pl-2.5 ${filterState.district !== 'all' ? 'pr-6' : 'pr-2'} rounded-full text-xs font-medium border transition-all inline-flex items-center gap-1.5 ${
+                filterState.district !== 'all'
+                  ? 'bg-blue-50 text-blue-900 border-blue-300 font-semibold shadow-2xs ring-1 ring-blue-400/20'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <MapPin className={`w-3.5 h-3.5 shrink-0 ${filterState.district !== 'all' ? 'text-blue-600' : 'text-slate-500'}`} />
+              <span className="truncate max-w-[130px]">
+                {filterState.district === 'all' ? 'Bezirk' : filterState.district}
+              </span>
+              {filterState.district === 'all' && (
+                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+              )}
+            </div>
+
             <select
               value={filterState.district}
               onChange={handleDistrictChange}
-              className={`w-full h-8 pl-7 sm:pl-8 pr-6 text-xs rounded-lg border appearance-none font-medium cursor-pointer transition-all ${
-                filterState.district !== 'all'
-                  ? 'bg-blue-50 text-blue-900 border-blue-300 font-semibold shadow-xs ring-1 ring-blue-400/20'
-                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white'
-              }`}
-              title="Bezirk auswählen – zentriert & markiert den Bezirk automatisch auf der Karte"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              title="Bezirk auswählen – zentriert & markiert den Bezirk auf der Karte"
             >
-              <option value="all">📍 Ganz Berlin</option>
+              <option value="all">📍 Ganz Berlin (Alle Bezirke)</option>
               {BERLIN_DISTRICTS.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  Bezirk {d}
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+
+            {filterState.district !== 'all' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange({ ...filterState, district: 'all' });
+                }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 rounded-full bg-blue-200/70 hover:bg-blue-300 flex items-center justify-center text-blue-800 cursor-pointer transition-colors"
+                title="Bezirk zurücksetzen"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            )}
           </div>
 
-          {/* Fachlicher Schwerpunkt */}
-          <div className="relative min-w-[140px] sm:min-w-[170px] flex-1 sm:flex-initial">
+          {/* 2. Fachlicher Schwerpunkt Pill */}
+          <div className="relative shrink-0 inline-flex items-center group">
+            <div
+              className={`h-7 pl-2.5 ${filterState.primaryFocus !== 'all' ? 'pr-6' : 'pr-2'} rounded-full text-xs font-medium border transition-all inline-flex items-center gap-1.5 ${
+                filterState.primaryFocus !== 'all'
+                  ? 'bg-indigo-50 text-indigo-900 border-indigo-300 font-semibold shadow-2xs ring-1 ring-indigo-400/20'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Compass className={`w-3.5 h-3.5 shrink-0 ${filterState.primaryFocus !== 'all' ? 'text-indigo-600' : 'text-slate-500'}`} />
+              <span className="truncate max-w-[130px]">
+                {filterState.primaryFocus === 'all'
+                  ? 'Schwerpunkt'
+                  : PRIMARY_FOCUS_OPTIONS.find((o) => o.id === filterState.primaryFocus)?.label.split(' & ')[0] || 'Schwerpunkt'}
+              </span>
+              {filterState.primaryFocus === 'all' && (
+                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+              )}
+            </div>
+
             <select
               value={filterState.primaryFocus}
               onChange={(e) => handleFocusChange(e.target.value as 'all' | PrimaryFocus)}
-              className={`w-full h-8 px-2.5 pr-6 text-xs rounded-lg border appearance-none font-medium cursor-pointer transition-all ${
-                filterState.primaryFocus !== 'all'
-                  ? 'bg-indigo-50 text-indigo-900 border-indigo-300 font-semibold shadow-xs ring-1 ring-indigo-400/20'
-                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white'
-              }`}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              title="Fachlichen Schwerpunkt auswählen"
             >
-              <option value="all">{t.allFocus}</option>
+              <option value="all">Alle Schwerpunkte</option>
               {PRIMARY_FOCUS_OPTIONS.map((opt) => (
                 <option key={opt.id} value={opt.id}>
                   {opt.label}
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+
+            {filterState.primaryFocus !== 'all' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleFocusChange('all');
+                }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 rounded-full bg-indigo-200/70 hover:bg-indigo-300 flex items-center justify-center text-indigo-800 cursor-pointer transition-colors"
+                title="Schwerpunkt zurücksetzen"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            )}
           </div>
 
-          {/* Schnelltaste: Sofort / Ohne Termin (Walk-In) */}
+          {/* 3. Walk-In / Ohne Termin Pill-Toggle */}
           <button
             type="button"
             onClick={() => handleAccessChange(filterState.accessType === 'niedrigschwellig' ? 'all' : 'niedrigschwellig')}
-            className={`inline-flex items-center gap-1.5 h-8 px-2.5 text-xs rounded-lg border transition-all cursor-pointer shrink-0 ${
+            className={`h-7 px-2.5 rounded-full text-xs font-medium border transition-all inline-flex items-center gap-1.5 shrink-0 cursor-pointer ${
               filterState.accessType === 'niedrigschwellig'
-                ? 'bg-teal-600 text-white border-teal-700 shadow-xs font-semibold'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:text-slate-900'
+                ? 'bg-teal-50 text-teal-800 border-teal-300 font-semibold shadow-2xs ring-1 ring-teal-400/20'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
             }`}
-            title="Nur Einrichtungen mit offener Sprechstunde / ohne vorherigen Termin (Walk-In) anzeigen"
+            title="Nur Angebote ohne vorherigen Termin (Walk-In) anzeigen"
           >
-            <DoorOpen className={`w-3.5 h-3.5 ${filterState.accessType === 'niedrigschwellig' ? 'text-white' : 'text-teal-600'}`} />
+            <DoorOpen className={`w-3.5 h-3.5 ${filterState.accessType === 'niedrigschwellig' ? 'text-teal-600' : 'text-slate-500'}`} />
             <span>Ohne Termin</span>
           </button>
 
-          {/* Dynamischer Kältehilfe Button (Saisonal: Okt–Apr) */}
+          {/* 4. Dynamische Kältehilfe Pill (Saisonal: Okt–Apr) */}
           {(isSeasonalKaeltehilfe || filterState.kaeltehilfeOnly) && (
             <button
               type="button"
               onClick={() => onChange({ ...filterState, kaeltehilfeOnly: !filterState.kaeltehilfeOnly })}
-              className={`inline-flex items-center gap-1.5 h-8 px-2.5 text-xs font-semibold rounded-lg border transition-all shrink-0 cursor-pointer ${
+              className={`h-7 px-2.5 rounded-full text-xs font-medium border transition-all inline-flex items-center gap-1.5 shrink-0 cursor-pointer ${
                 filterState.kaeltehilfeOnly
-                  ? 'bg-cyan-600 text-white border-cyan-700 shadow-xs ring-2 ring-cyan-400/30'
-                  : 'bg-cyan-50/90 text-cyan-800 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-900'
+                  ? 'bg-cyan-600 text-white border-cyan-700 font-semibold shadow-2xs ring-1 ring-cyan-400/30'
+                  : 'bg-cyan-50/80 text-cyan-800 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-900'
               }`}
-              title="Berliner Kältehilfe: Notübernachtungen, Wärmestuben und Nachtcafés"
+              title="Berliner Kältehilfe (Okt–Apr): Notübernachtungen, Wärmestuben und Nachtcafés"
             >
               <Snowflake className={`w-3.5 h-3.5 ${filterState.kaeltehilfeOnly ? 'animate-pulse text-white' : 'text-cyan-600'}`} />
               <span>Kältehilfe</span>
             </button>
           )}
 
-          {/* Erweiterte Filter Button */}
+          {/* 5. Erweiterte Filter Pill */}
           <button
             type="button"
             onClick={toggleExpanded}
-            className={`inline-flex items-center gap-1.5 h-8 px-2.5 text-xs font-medium rounded-lg border transition-all cursor-pointer ml-auto shrink-0 ${
+            className={`h-7 px-2.5 rounded-full text-xs font-medium border transition-all inline-flex items-center gap-1.5 shrink-0 cursor-pointer ${
               isExpanded || activeAdvancedCount > 0
-                ? 'bg-slate-800 text-white border-slate-900 shadow-xs font-semibold'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-white hover:text-slate-900'
+                ? 'bg-slate-800 text-white border-slate-900 font-semibold shadow-2xs'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
             }`}
             title="Weitere Filter öffnen: Trägerform (Ämter/Träger), Sprache, Alter, Barrierefreiheit"
           >
@@ -284,15 +348,26 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 {activeAdvancedCount}
               </span>
             )}
-            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-white' : ''}`} />
           </button>
+
+          {/* Schneller Reset, falls Filter aktiv sind */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="h-7 px-2 text-[11px] text-amber-700 hover:text-amber-800 font-medium hover:underline shrink-0 cursor-pointer ml-auto"
+              title="Alle aktiven Filter auf Standard zurücksetzen"
+            >
+              Zurücksetzen
+            </button>
+          )}
         </div>
 
-        {/* Ausklappbarer Bereich: Erweiterte Filter */}
+        {/* Ausklappbarer Bereich: Erweiterte Detailfilter */}
         {isExpanded && (
           <div className="pt-3 border-t border-slate-200/90 space-y-3 animate-in fade-in-50 duration-150">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-              {/* 1. Trägerform (aus der Hauptleiste hierher verlegt) */}
+              {/* Trägerform */}
               <div>
                 <label className="block text-slate-600 font-semibold mb-1.5 text-[11px]">
                   Trägerform
@@ -336,7 +411,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 </div>
               </div>
 
-              {/* 2. Zugangsform Details (Termin vs. Antrag) */}
+              {/* Zugangsform Details */}
               <div>
                 <label className="block text-slate-600 font-semibold mb-1.5 text-[11px]">
                   Zugangsform
@@ -380,7 +455,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 </div>
               </div>
 
-              {/* 3. Sprachangebot */}
+              {/* Sprachangebot */}
               <div>
                 <label className="block text-slate-600 font-semibold mb-1.5 flex items-center gap-1 text-[11px]">
                   <Languages className="w-3 h-3 text-slate-500" />
@@ -400,7 +475,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 </select>
               </div>
 
-              {/* 4. Zielgruppe / Altersgruppe */}
+              {/* Zielgruppe / Altersgruppe */}
               <div className="sm:col-span-2">
                 <label className="block text-slate-600 font-semibold mb-1.5 flex items-center gap-1 text-[11px]">
                   <Users className="w-3 h-3 text-slate-500" />
