@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   AlertCircle,
   HelpCircle,
+  Navigation,
 } from 'lucide-react';
 import {
   resolveJurisdictionByAddress,
@@ -24,7 +25,7 @@ import {
   StatutoryAgency,
 } from '@/lib/lor/jurisdictionEngine';
 import { BerlinDistrict } from '@/types/facility';
-import { getBVGRouteUrl } from '@/lib/geolocation';
+import { getTransitDirectionsUrl } from '@/lib/geolocation';
 
 interface JurisdictionFinderModalProps {
   isOpen: boolean;
@@ -142,6 +143,8 @@ Praxishinweis: ${agency.internalAdvice}`;
                 Zuständiger Bezirk: <strong className="text-blue-700">{result.district}</strong>{' '}
                 {result.matchedBy === 'zip' && `(gemeldet über PLZ ${result.query})`}
                 {result.matchedBy === 'street' && `(gemeldet über Straße „${result.query}“)`}
+                {result.matchedBy === 'locality' && `(gemeldet über Ortsteil „${result.query}“)`}
+                {result.matchedBy === 'district_name' && `(Bezirksabfrage: ${result.query})`}
               </span>
             </div>
           )}
@@ -278,13 +281,15 @@ const AgencyCard: React.FC<{
         </a>
 
         <a
-          href={getBVGRouteUrl(agency.address)}
+          href={getTransitDirectionsUrl(`${agency.name}, ${agency.address}`)}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 rounded border border-amber-300 transition-colors"
+          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-blue-900 bg-blue-100 hover:bg-blue-200 rounded border border-blue-300 transition-colors"
+          title="Öffne Google Maps ÖPNV-Route ab aktuellem Standort"
         >
-          <span>BVG Anfahrt</span>
-          <ExternalLink className="w-2.5 h-2.5" />
+          <Navigation className="w-2.5 h-2.5 text-blue-700" />
+          <span>ÖPNV Route</span>
+          <ExternalLink className="w-2.5 h-2.5 text-blue-600" />
         </a>
       </div>
     </div>

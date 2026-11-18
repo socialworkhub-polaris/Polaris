@@ -155,10 +155,14 @@ export function getActiveNightWarning(
 
   // Expiration Rule:
   // 1. More than 12 hours old -> EXPIRED
-  // 2. OR Note was created yesterday evening and current time is past 08:00 AM today -> EXPIRED
+  // 2. OR Note was created during night shift (< 08:00 or >= 18:00) and current time is past 08:00 AM -> EXPIRED
   const isPastEightAm = now.getHours() >= 8;
-  const isCreatedYesterday = new Date(latestWarning.createdAt).getDate() !== now.getDate();
-  const isShiftExpired = diffHours > 12 || (isCreatedYesterday && isPastEightAm);
+  const createdDate = new Date(latestWarning.createdAt);
+  const isCreatedYesterday = createdDate.getDate() !== now.getDate();
+  const createdHour = createdDate.getHours();
+  const isNightShiftNote = createdHour >= 18 || createdHour < 8;
+  const hasNightShiftEnded = isNightShiftNote && isPastEightAm && (isCreatedYesterday || createdHour < 8);
+  const isShiftExpired = diffHours > 12 || hasNightShiftEnded;
 
   if (isShiftExpired) {
     return { activeWarning: null, isExpired: true, formattedAge: '' };

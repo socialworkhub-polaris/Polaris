@@ -23,6 +23,7 @@ import {
   PhoneCall,
   Calendar,
   Flag,
+  Navigation,
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
 import { ReportCorrectionModal } from './ReportCorrectionModal';
@@ -233,24 +234,24 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
               {/* 1-Tap Routing Buttons & QR Code */}
               <div className="pt-2 border-t border-slate-200/80 flex flex-wrap items-center gap-2">
                 <a
-                  href={getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition shadow-2xs"
-                  title="Öffnet die BVG Verbindungssuche mit diesem Ziel"
-                >
-                  <Train className="w-3.5 h-3.5 text-amber-700" />
-                  <span>BVG Route planen</span>
-                </a>
-                <a
                   href={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-semibold transition shadow-2xs"
-                  title="In Google Maps mit ÖPNV-Führung öffnen"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-2xs"
+                  title="In Google Maps mit direkter ÖPNV-Führung ab aktuellem Standort öffnen"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Google Maps</span>
+                  <Navigation className="w-3.5 h-3.5 text-blue-100" />
+                  <span>ÖPNV Route (Google Maps)</span>
+                </a>
+                <a
+                  href={getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition shadow-2xs"
+                  title="Öffnet die BVG Verbindungssuche mit diesem Ziel"
+                >
+                  <Train className="w-3.5 h-3.5 text-slate-500" />
+                  <span>BVG Fahrinfo</span>
                 </a>
               </div>
 

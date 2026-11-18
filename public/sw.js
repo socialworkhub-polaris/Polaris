@@ -1,6 +1,6 @@
 // Polaris Service Worker - Offline Streetwork Engine
-const CACHE_NAME = 'polaris-cache-v4';
-const DATA_CACHE_NAME = 'polaris-facilities-v4';
+const CACHE_NAME = 'polaris-cache-v5';
+const DATA_CACHE_NAME = 'polaris-facilities-v5';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -37,14 +37,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   const url = new URL(event.request.url);
 
   // Stale-While-Revalidate for facilities database:
-  // Delivers instant sub-millisecond cached response for streetworkers, revalidates in background.
+  // Delivers instant cached response for streetworkers, revalidates in background.
   if (url.pathname.includes('/api/facilities')) {
     event.respondWith(
       caches.open(DATA_CACHE_NAME).then(async (cache) => {
         const cachedResponse = await cache.match(event.request);
+
         const fetchPromise = fetch(event.request)
           .then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {
@@ -52,7 +58,13 @@ self.addEventListener('fetch', (event) => {
             }
             return networkResponse;
           })
-          .catch(() => cachedResponse);
+          .catch(() => {
+            if (cachedResponse) return cachedResponse;
+            return new Response(
+              JSON.stringify({ facilities: [], source: 'offline_fallback', error: 'Offline - Keine zwischengespeicherten Daten' }),
+              { headers: { 'Content-Type': 'application/json' }, status: 200 }
+            );
+          });
 
         return cachedResponse || fetchPromise;
       })
@@ -60,10 +72,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // General Network-First with Cache Fallback for navigation & static assets
+  // Network-First with Cache Fallback for navigation & static assets
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Cache successful responses for same-origin static assets
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          url.origin === self.location.origin &&
+          (url.pathname.startsWith('/_next/static') || url.pathname.endsWith('.svg') || url.pathname.endsWith('.png'))
+        ) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        const matched = await caches.match(event.request);
+        if (matched) return matched;
+
+        // Fallback for SPA page navigation
+        if (event.request.mode === 'navigate') {
+          const rootMatch = await caches.match('/');
+          if (rootMatch) return rootMatch;
+        }
+
+        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+      })
   );
 });

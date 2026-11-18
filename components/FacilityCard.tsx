@@ -23,7 +23,7 @@ import {
 import { Facility } from '@/types/facility';
 import { useBookmarks } from '../lib/useBookmarks';
 import { useTeam } from '../lib/TeamContext';
-import { getBVGRouteUrl, formatDistance } from '@/lib/geolocation';
+import { getTransitDirectionsUrl, formatDistance } from '@/lib/geolocation';
 import { getAdmissionStatus, getActiveNightWarning } from '@/lib/kaeltehilfe/capacityEngine';
 
 interface FacilityCardProps {
@@ -232,14 +232,15 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
             <span className="font-medium text-slate-800">{facility.transit.station}</span>
             <span className="text-slate-400">({facility.transit.walkingTime})</span>
             <a
-              href={getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+              href={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-1.5 py-0.5 rounded border border-amber-300 transition-colors ml-0.5"
-              title="Öffne direkte BVG Verbindungssuche"
+              className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-900 bg-blue-100 hover:bg-blue-200 px-1.5 py-0.5 rounded border border-blue-300 transition-colors ml-0.5"
+              title="Öffne Google Maps ÖPNV-Route ab aktuellem Standort"
             >
-              BVG Route
+              <Navigation className="w-2.5 h-2.5 text-blue-700" />
+              <span>ÖPNV Route</span>
             </a>
           </div>
           <div className="flex items-center gap-1.5">

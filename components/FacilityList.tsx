@@ -54,10 +54,16 @@ export const FacilityList: React.FC<FacilityListProps> = ({
 
   const sortedFacilities = [...facilities].sort((a, b) => {
     if (sortBy === 'distance' || (sortBy === 'default' && userLocation)) {
-      if (userLocation && a.coordinates && b.coordinates) {
-        const distA = calculateDistanceKm(userLocation[0], userLocation[1], a.coordinates[0], a.coordinates[1]);
-        const distB = calculateDistanceKm(userLocation[0], userLocation[1], b.coordinates[0], b.coordinates[1]);
-        return distA - distB;
+      if (userLocation) {
+        const hasA = Array.isArray(a.coordinates) && a.coordinates.length === 2;
+        const hasB = Array.isArray(b.coordinates) && b.coordinates.length === 2;
+        if (hasA && hasB) {
+          const distA = calculateDistanceKm(userLocation[0], userLocation[1], a.coordinates[0], a.coordinates[1]);
+          const distB = calculateDistanceKm(userLocation[0], userLocation[1], b.coordinates[0], b.coordinates[1]);
+          return distA - distB;
+        }
+        if (hasA && !hasB) return -1;
+        if (!hasA && hasB) return 1;
       }
     }
     if (sortBy === 'name') {

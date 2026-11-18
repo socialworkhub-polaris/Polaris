@@ -48,6 +48,12 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
     const dest = `${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`;
     const bvgUrl = getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`);
     const mapsUrl = getTransitDirectionsUrl(dest);
+    const safeWorkerNote = workerNote
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/\n/g, '<br>');
 
     const htmlContent = `<!DOCTYPE html>
 <html lang="de">
@@ -76,8 +82,8 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
     <p><strong>${facility.address.street}</strong>, ${facility.address.zipCode} Berlin (${facility.district})</p>
     <p>ÖPNV: <strong>${facility.transit.station}</strong> (${facility.transit.lines.join(', ')} - ${facility.transit.walkingTime})</p>
     <div class="no-print" style="margin-top: 12px;">
-      <a class="btn" href="${bvgUrl}" target="_blank">🚇 BVG Route planen</a>
-      <a class="btn" href="${mapsUrl}" target="_blank" style="background: #0f172a;">🗺️ Google Maps Navigation</a>
+      <a class="btn" href="${mapsUrl}" target="_blank">🗺️ ÖPNV Route (Google Maps)</a>
+      <a class="btn" href="${bvgUrl}" target="_blank" style="background: #475569;">🚇 BVG Fahrinfo</a>
       ${facility.contact?.phone ? `<a class="btn" href="tel:${facility.contact.phone.replace(/\\s+/g, '')}" style="background: #16a34a;">📞 ${facility.contact.phone}</a>` : ''}
     </div>
   </div>
@@ -99,7 +105,7 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
   ${workerNote ? `
   <div class="box" style="background: #eff6ff; border-color: #bfdbfe;">
     <div class="title" style="color: #1e40af;">📝 Persönliche Notiz / Vereinbarter Termin</div>
-    <p>${workerNote.replace(/\\n/g, '<br>')}</p>
+    <p>${safeWorkerNote}</p>
   </div>` : ''}
 
   <div style="margin-top: 24px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px;">

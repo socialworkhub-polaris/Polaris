@@ -47,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenJurisdiction,
 }) => {
   const [isLegalOpen, setIsLegalOpen] = useState(false);
+  const [legalDefaultTab, setLegalDefaultTab] = useState<'dsgvo' | 'disclaimer' | 'impressum'>('dsgvo');
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
@@ -80,6 +81,14 @@ export const Header: React.FC<HeaderProps> = ({
     const handleOpenLicense = () => setIsLicenseOpen(true);
     const handleOpenTeam = () => setIsTeamModalOpen(true);
     const handleOpenNewsletter = () => setIsNewsletterOpen(true);
+    const handleOpenLegal = (e?: Event) => {
+      const customEvent = e as CustomEvent<{ tab?: 'dsgvo' | 'disclaimer' | 'impressum' }>;
+      if (customEvent?.detail?.tab) {
+        setLegalDefaultTab(customEvent.detail.tab);
+      }
+      setIsLegalOpen(true);
+    };
+    const handleOpenFeedback = () => setIsFeedbackOpen(true);
 
     const updateOnlineStatus = () => {
       setIsOffline(typeof navigator !== 'undefined' ? !navigator.onLine : false);
@@ -92,6 +101,8 @@ export const Header: React.FC<HeaderProps> = ({
     window.addEventListener('polaris:open-license', handleOpenLicense);
     window.addEventListener('polaris:open-team', handleOpenTeam);
     window.addEventListener('polaris:open-newsletter', handleOpenNewsletter);
+    window.addEventListener('polaris:open-legal', handleOpenLegal);
+    window.addEventListener('polaris:open-feedback', handleOpenFeedback);
     return () => {
       window.removeEventListener('online', updateOnlineStatus);
       window.removeEventListener('offline', updateOnlineStatus);
@@ -99,6 +110,8 @@ export const Header: React.FC<HeaderProps> = ({
       window.removeEventListener('polaris:open-license', handleOpenLicense);
       window.removeEventListener('polaris:open-team', handleOpenTeam);
       window.removeEventListener('polaris:open-newsletter', handleOpenNewsletter);
+      window.removeEventListener('polaris:open-legal', handleOpenLegal);
+      window.removeEventListener('polaris:open-feedback', handleOpenFeedback);
     };
   }, []);
 
@@ -170,8 +183,8 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Buttons gruppiert auf der linken Seite */}
-            <div className="flex items-center gap-2 sm:gap-2.5 text-xs flex-wrap">
+            {/* Primäre Werkzeuge: Smart Triage & Ämter-Zuständigkeit */}
+            <div className="flex items-center gap-2 sm:gap-3 text-xs">
               {/* Smart Triage Button */}
               {onOpenTriage && (
                 <button
@@ -189,154 +202,18 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenJurisdiction}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs"
-                  title="Zuständige Pflichtbehörden (Jobcenter, RSD, Soziale Wohnhilfe, SpDi) ermitteln"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-amber-200 hover:text-white bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 hover:border-amber-400/70 rounded-lg transition-all cursor-pointer text-xs font-semibold shrink-0 shadow-xs"
+                  title="Zuständige Pflichtbehörden (Jobcenter, RSD, Soziale Wohnhilfe, SpDi) nach Berliner LOR ermitteln"
                 >
-                  <Landmark className="w-3.5 h-3.5 text-amber-300" />
-                  <span className="hidden sm:inline">Ämter-Zuständigkeit</span>
-                </button>
-              )}
-
-              {/* Datenschutz & Impressum Button mit Outline */}
-              <button
-                type="button"
-                onClick={() => setIsLegalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs"
-                title="Datenschutz, Impressum & Rechtliche Hinweise"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden md:inline">{t.privacy}</span>
-              </button>
-
-              {/* Feedback Button mit Outline */}
-              <button
-                type="button"
-                onClick={() => setIsFeedbackOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-slate-200 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs"
-                title="Feedback oder Feature-Idee melden"
-              >
-                <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden md:inline">{t.giveFeedback}</span>
-              </button>
-
-              {/* Updates & News Dropdown */}
-              <div ref={updatesDropdownRef} className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsUpdatesOpen(!isUpdatesOpen)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs border ${
-                    isUpdatesOpen
-                      ? 'bg-slate-800 text-white border-blue-500/80 shadow-blue-500/10'
-                      : 'text-slate-200 hover:text-white bg-slate-800/60 hover:bg-slate-800 border-slate-700 hover:border-slate-500'
-                  }`}
-                  title="Neuigkeiten, Plattform-Updates & Newsletter"
-                  aria-expanded={isUpdatesOpen}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="hidden md:inline">{t.updatesAndNews}</span>
-                  <span className="md:hidden">News</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isUpdatesOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isUpdatesOpen && (
-                  <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
-                    {/* Newsletter Action Item */}
-                    <div className="p-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsUpdatesOpen(false);
-                          setIsNewsletterOpen(true);
-                        }}
-                        className="w-full text-left p-2.5 rounded-lg bg-blue-950/40 hover:bg-blue-900/60 border border-blue-800/60 transition-colors flex items-start gap-2.5 group cursor-pointer"
-                      >
-                        <div className="p-2 rounded-lg bg-blue-500/20 text-blue-300 group-hover:bg-blue-500/30 shrink-0 mt-0.5">
-                          <Mail className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-white group-hover:text-blue-200">
-                              {t.subscribeNewsletter}
-                            </span>
-                            <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded font-semibold border border-blue-500/30">
-                              Kostenlos
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-300 mt-1 leading-snug">
-                            Monatliche Fachinfos, Kältehilfe-Aktionen & SGB-Rechtsänderungen per E-Mail.
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-
-                    {/* Platform News Highlights */}
-                    <div className="px-3.5 pt-2 pb-1 border-t border-slate-800/80">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                        {t.whatsNew}
-                      </span>
-                    </div>
-
-                    <div className="px-3.5 py-1.5 space-y-2 text-[11px]">
-                      <div className="flex items-start gap-2 text-slate-300">
-                        <ClipboardList className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-100 font-semibold block">Schwarzes Brett & Übergaben</strong>
-                          <span className="text-slate-400">Gemeinsame Team-Notizen & Kalender für Einrichtungen.</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-2 text-slate-300">
-                        <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-100 font-semibold block">SGB KI-Triage 2.0</strong>
-                          <span className="text-slate-400">Paragraphengenaue Stufenpläne für Berliner Notlagen.</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-2 text-slate-300">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="text-slate-100 font-semibold block">Kältehilfe & Notruf-Leitfaden</strong>
-                          <span className="text-slate-400">Streetwork-Hotlines mit 1-Tap Schnellwahl.</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Feedback Hint */}
-                    <div className="mt-1 px-3 py-2 bg-slate-950/70 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">Idee für ein Feature?</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsUpdatesOpen(false);
-                          setIsFeedbackOpen(true);
-                        }}
-                        className="text-blue-400 hover:text-blue-300 font-medium underline cursor-pointer"
-                      >
-                        {t.giveFeedback}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Lizenz erwerben Button: An die rechte Seite der linken Gruppe gesetzt, damit beim Ausblenden nichts nach links rutscht */}
-              {!isLicensed && (
-                <button
-                  type="button"
-                  onClick={() => setIsLicenseOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-emerald-300 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 rounded-lg transition-colors cursor-pointer text-xs font-medium shrink-0"
-                  title="Team-Lizenz für Träger & Einrichtungen"
-                >
-                  <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{t.getLicense}</span>
+                  <Landmark className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Ämter-Zuständigkeit</span>
                 </button>
               )}
             </div>
 
           </div>
 
-          {/* Rechter Bereich: Team-Dropdown, Schwarzes Brett, Account/Profil & Abmelden, Language Switcher */}
+          {/* Rechter Bereich: Team-Dropdown, Schwarzes Brett, Updates & News, Account/Profil & Abmelden, Language Switcher */}
           <div className="flex items-center gap-2 sm:gap-2.5 text-xs shrink-0 ml-auto">
             {/* 1. Team Selector Dropdown (Links von Schwarzem Brett) */}
             {user && (
@@ -372,7 +249,131 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* 3 & 4. Benutzer-Profil (Account) & Abmelden (Sign Out) */}
+            {/* 3. Updates & News Dropdown (Rechts ausgerichtet) */}
+            <div ref={updatesDropdownRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsUpdatesOpen(!isUpdatesOpen)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-xs shrink-0 shadow-xs border ${
+                  isUpdatesOpen
+                    ? 'bg-slate-800 text-white border-blue-500/80 shadow-blue-500/10'
+                    : 'text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border-slate-700 hover:border-slate-500'
+                }`}
+                title="Neuigkeiten, Plattform-Updates, Newsletter & Träger-Lizenz"
+                aria-expanded={isUpdatesOpen}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden md:inline">{t.updatesAndNews}</span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isUpdatesOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isUpdatesOpen && (
+                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
+                  {/* Newsletter Action Item */}
+                  <div className="p-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUpdatesOpen(false);
+                        setIsNewsletterOpen(true);
+                      }}
+                      className="w-full text-left p-2.5 rounded-lg bg-blue-950/40 hover:bg-blue-900/60 border border-blue-800/60 transition-colors flex items-start gap-2.5 group cursor-pointer"
+                    >
+                      <div className="p-2 rounded-lg bg-blue-500/20 text-blue-300 group-hover:bg-blue-500/30 shrink-0 mt-0.5">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white group-hover:text-blue-200">
+                            {t.subscribeNewsletter}
+                          </span>
+                          <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded font-semibold border border-blue-500/30">
+                            Kostenlos
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 mt-1 leading-snug">
+                          Monatliche Fachinfos, Kältehilfe-Aktionen & SGB-Rechtsänderungen per E-Mail.
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Team-Lizenz Button (wenn nicht lizenziert) */}
+                  {!isLicensed && (
+                    <div className="px-1.5 pb-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUpdatesOpen(false);
+                          setIsLicenseOpen(true);
+                        }}
+                        className="w-full text-left p-2 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-700/60 transition-colors flex items-center gap-2 group cursor-pointer text-xs"
+                      >
+                        <CreditCard className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-semibold text-emerald-200 group-hover:text-white">
+                            {t.getLicense}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block truncate">
+                            Team-Lizenz für Träger & Einrichtungen
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Platform News Highlights */}
+                  <div className="px-3.5 pt-2 pb-1 border-t border-slate-800/80">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                      {t.whatsNew}
+                    </span>
+                  </div>
+
+                  <div className="px-3.5 py-1.5 space-y-2 text-[11px]">
+                    <div className="flex items-start gap-2 text-slate-300">
+                      <Landmark className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-slate-100 font-semibold block">Ämter-Zuständigkeit (LOR)</strong>
+                        <span className="text-slate-400">Jobcenter, RSD, Soziale Wohnhilfe & SpDi nach Adresse ermitteln.</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 text-slate-300">
+                      <ClipboardList className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-slate-100 font-semibold block">Schwarzes Brett & Übergaben</strong>
+                        <span className="text-slate-400">Gemeinsame Team-Notizen & Kalender für Einrichtungen.</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 text-slate-300">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-slate-100 font-semibold block">SGB KI-Triage 2.0</strong>
+                        <span className="text-slate-400">Paragraphengenaue Stufenpläne für Berliner Notlagen.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Feedback Hint */}
+                  <div className="mt-1 px-3 py-2 bg-slate-950/70 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Idee für ein Feature?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUpdatesOpen(false);
+                        setIsFeedbackOpen(true);
+                      }}
+                      className="text-blue-400 hover:text-blue-300 font-medium underline cursor-pointer"
+                    >
+                      {t.giveFeedback}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Benutzer-Profil (Account) & Abmelden (Sign Out) */}
             <UserMenu />
 
             {/* 5. Language Switcher (DE | EN) - Ganz rechts */}
@@ -402,6 +403,7 @@ export const Header: React.FC<HeaderProps> = ({
       <LegalModal
         isOpen={isLegalOpen}
         onClose={() => setIsLegalOpen(false)}
+        defaultTab={legalDefaultTab}
       />
 
       <LicenseModal

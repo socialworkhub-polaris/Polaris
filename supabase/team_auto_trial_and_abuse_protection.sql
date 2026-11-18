@@ -45,7 +45,6 @@ DECLARE
     v_clean_code TEXT;
     v_author_name TEXT;
     v_welcome_content TEXT;
-    v_result JSONB;
 BEGIN
     v_user_id := auth.uid();
     IF v_user_id IS NULL THEN
@@ -161,23 +160,19 @@ BEGIN
         );
     END IF;
 
-    -- Return full organization payload
-    SELECT jsonb_build_object(
-        'id', o.id,
-        'name', o.name,
-        'slug', o.slug,
-        'invite_code', o.invite_code,
+    -- Return full organization payload directly (avoids SELECT ... INTO false-positive in Supabase linter)
+    RETURN jsonb_build_object(
+        'id', v_org_id,
+        'name', v_clean_name,
+        'slug', v_slug,
+        'invite_code', v_clean_code,
         'role', 'admin',
-        'plan', o.plan,
-        'subscription_status', o.subscription_status,
-        'trial_ends_at', o.trial_ends_at,
-        'seat_limit', o.seat_limit,
+        'plan', v_plan,
+        'subscription_status', v_status,
+        'trial_ends_at', v_trial_ends,
+        'seat_limit', 10,
         'is_trial_granted', (NOT v_has_used_trial)
-    ) INTO v_result
-    FROM public.organizations o
-    WHERE o.id = v_org_id;
-
-    RETURN v_result;
+    );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

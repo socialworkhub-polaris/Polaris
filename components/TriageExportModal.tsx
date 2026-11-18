@@ -84,16 +84,30 @@ export function TriageExportModal({
     window.print();
   };
 
+  const escapeHtml = (str?: string | null): string => {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
   const handleDownloadHtml = () => {
     let htmlContent = '';
     const title = exportMode === 'aktenvermerk' ? `Aktenvermerk_${caseId}` : `Klienten_Laufzettel_${todayStr.replace(/\./g, '-')}`;
+    const safeAgency = escapeHtml(agencyName);
+    const safeCaseId = escapeHtml(caseId);
+    const safeWorker = escapeHtml(caseworkerName);
+    const safeNotes = escapeHtml(formData.notes || 'Keine');
 
     if (exportMode === 'aktenvermerk') {
       htmlContent = `<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <title>Aktenvermerk ${caseId} — Polaris</title>
+  <title>Aktenvermerk ${safeCaseId} — Polaris</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 32px; color: #0f172a; max-width: 800px; margin: 0 auto; line-height: 1.5; font-size: 13px; }
     h1 { font-size: 20px; font-weight: 900; margin: 0 0 4px; }
@@ -107,9 +121,9 @@ export function TriageExportModal({
 </head>
 <body>
   <div class="header">
-    <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">${agencyName}</div>
+    <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em;">${safeAgency}</div>
     <h1>SOZIALPÄDAGOGISCHES ERSTCLEARING & AKTENVERMERK</h1>
-    <div style="color: #475569;">Fall-ID: <strong>${caseId}</strong> • Datum: ${todayStr}, ${timeStr} Uhr • Fachkraft: ${caseworkerName}</div>
+    <div style="color: #475569;">Fall-ID: <strong>${safeCaseId}</strong> • Datum: ${todayStr}, ${timeStr} Uhr • Fachkraft: ${safeWorker}</div>
   </div>
 
   <div class="section">
@@ -118,7 +132,7 @@ export function TriageExportModal({
     <p>• Dringlichkeit: <strong>${urgencyLabels[formData.urgency] || formData.urgency}</strong></p>
     <p>• Aufenthaltsstatus: ${residenceLabels[formData.residenceStatus] || formData.residenceStatus}</p>
     <p>• Bezirk: ${formData.district || 'Berlinweit'}</p>
-    <p>• Aktenvermerk / Kontext: ${formData.notes || 'Keine'}</p>
+    <p>• Aktenvermerk / Kontext: ${safeNotes}</p>
   </div>
 
   <div class="section">

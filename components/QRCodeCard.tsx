@@ -40,6 +40,7 @@ export const QRCodeCard: React.FC<QRCodeCardProps> = ({
 
   return (
     <div className={`flex items-center gap-3 p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={dataUrl}
         alt="QR-Code für Klienten-Smartphone"

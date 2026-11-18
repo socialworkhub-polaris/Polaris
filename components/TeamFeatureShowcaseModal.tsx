@@ -327,7 +327,7 @@ export const TeamFeatureShowcaseModal: React.FC<TeamFeatureShowcaseModalProps> =
                       <span className="text-[11px] text-slate-400">Vor 2 Tagen</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">
-                      "Klingeln bei Aufgang B (Code: 4821). Sozialarbeiter Hr. Weber ist Mo & Do ab 8:30 Uhr direkt vor Ort erreichbar. Schnelle Aufnahme bei Vorlage der Zuweisung nach § 67 SGB XII möglich."
+                      &bdquo;Klingeln bei Aufgang B (Code: 4821). Sozialarbeiter Hr. Weber ist Mo &amp; Do ab 8:30 Uhr direkt vor Ort erreichbar. Schnelle Aufnahme bei Vorlage der Zuweisung nach § 67 SGB XII möglich.&ldquo;
                     </p>
                     <div className="text-[11px] text-slate-400 flex items-center gap-1.5 pt-1 border-t border-slate-800">
                       <Users className="w-3 h-3 text-indigo-400" />

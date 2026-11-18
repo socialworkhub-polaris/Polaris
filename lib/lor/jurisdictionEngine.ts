@@ -25,7 +25,7 @@ export interface DistrictJurisdiction {
 
 export interface JurisdictionMatchResult {
   district: BerlinDistrict;
-  matchedBy: 'zip' | 'street' | 'district_name';
+  matchedBy: 'zip' | 'street' | 'district_name' | 'locality';
   query: string;
   jobcenter: StatutoryAgency;
   jugendamtRSD: StatutoryAgency;
@@ -757,6 +757,127 @@ export const PROMINENT_STREETS_TO_DISTRICT: Record<string, BerlinDistrict> = {
   potsdamerstraße: 'Tempelhof-Schöneberg',
 };
 
+export const BERLIN_LOCALITIES_TO_DISTRICT: Record<string, BerlinDistrict> = {
+  // Mitte
+  mitte: 'Mitte',
+  tiergarten: 'Mitte',
+  wedding: 'Mitte',
+  moabit: 'Mitte',
+  gesundbrunnen: 'Mitte',
+  hansaviertel: 'Mitte',
+
+  // Friedrichshain-Kreuzberg
+  friedrichshain: 'Friedrichshain-Kreuzberg',
+  kreuzberg: 'Friedrichshain-Kreuzberg',
+  'f-hain': 'Friedrichshain-Kreuzberg',
+  xberg: 'Friedrichshain-Kreuzberg',
+
+  // Pankow
+  pankow: 'Pankow',
+  'prenzlauer berg': 'Pankow',
+  prenzlberg: 'Pankow',
+  weißensee: 'Pankow',
+  weissensee: 'Pankow',
+  heinersdorf: 'Pankow',
+  karow: 'Pankow',
+  buch: 'Pankow',
+  'französisch buchholz': 'Pankow',
+
+  // Charlottenburg-Wilmersdorf
+  charlottenburg: 'Charlottenburg-Wilmersdorf',
+  wilmersdorf: 'Charlottenburg-Wilmersdorf',
+  halensee: 'Charlottenburg-Wilmersdorf',
+  schmargendorf: 'Charlottenburg-Wilmersdorf',
+  grunewald: 'Charlottenburg-Wilmersdorf',
+  westend: 'Charlottenburg-Wilmersdorf',
+
+  // Spandau
+  spandau: 'Spandau',
+  haselhorst: 'Spandau',
+  siemensstadt: 'Spandau',
+  staaken: 'Spandau',
+  gatow: 'Spandau',
+  kladow: 'Spandau',
+  hakenfelde: 'Spandau',
+  'falkenhagener feld': 'Spandau',
+
+  // Steglitz-Zehlendorf
+  steglitz: 'Steglitz-Zehlendorf',
+  zehlendorf: 'Steglitz-Zehlendorf',
+  lichterfelde: 'Steglitz-Zehlendorf',
+  lankwitz: 'Steglitz-Zehlendorf',
+  dahlem: 'Steglitz-Zehlendorf',
+  nikolassee: 'Steglitz-Zehlendorf',
+  wannsee: 'Steglitz-Zehlendorf',
+
+  // Tempelhof-Schöneberg
+  tempelhof: 'Tempelhof-Schöneberg',
+  schöneberg: 'Tempelhof-Schöneberg',
+  schoeneberg: 'Tempelhof-Schöneberg',
+  friedenau: 'Tempelhof-Schöneberg',
+  mariendorf: 'Tempelhof-Schöneberg',
+  marienfelde: 'Tempelhof-Schöneberg',
+  lichtenrade: 'Tempelhof-Schöneberg',
+
+  // Neukölln
+  neukölln: 'Neukölln',
+  neukoelln: 'Neukölln',
+  britz: 'Neukölln',
+  buckow: 'Neukölln',
+  rudow: 'Neukölln',
+  gropiusstadt: 'Neukölln',
+
+  // Treptow-Köpenick
+  treptow: 'Treptow-Köpenick',
+  köpenick: 'Treptow-Köpenick',
+  koepenick: 'Treptow-Köpenick',
+  'alt-treptow': 'Treptow-Köpenick',
+  plänterwald: 'Treptow-Köpenick',
+  baumschulenweg: 'Treptow-Köpenick',
+  johannisthal: 'Treptow-Köpenick',
+  niederschöneweide: 'Treptow-Köpenick',
+  altglienicke: 'Treptow-Köpenick',
+  adlershof: 'Treptow-Köpenick',
+  bohnsdorf: 'Treptow-Köpenick',
+  oberschöneweide: 'Treptow-Köpenick',
+  friedrichshagen: 'Treptow-Köpenick',
+  rahnsdorf: 'Treptow-Köpenick',
+  müggelheim: 'Treptow-Köpenick',
+  schmöckwitz: 'Treptow-Köpenick',
+
+  // Marzahn-Hellersdorf
+  marzahn: 'Marzahn-Hellersdorf',
+  hellersdorf: 'Marzahn-Hellersdorf',
+  biesdorf: 'Marzahn-Hellersdorf',
+  kaulsdorf: 'Marzahn-Hellersdorf',
+  mahlsdorf: 'Marzahn-Hellersdorf',
+
+  // Lichtenberg
+  lichtenberg: 'Lichtenberg',
+  friedrichsfelde: 'Lichtenberg',
+  karlshorst: 'Lichtenberg',
+  rummelsburg: 'Lichtenberg',
+  fennpfuhl: 'Lichtenberg',
+  'alt-hohenschönhausen': 'Lichtenberg',
+  'neu-hohenschönhausen': 'Lichtenberg',
+  hohenschönhausen: 'Lichtenberg',
+  falkenberg: 'Lichtenberg',
+  malchow: 'Lichtenberg',
+  wartenberg: 'Lichtenberg',
+
+  // Reinickendorf
+  reinickendorf: 'Reinickendorf',
+  tegel: 'Reinickendorf',
+  wittenau: 'Reinickendorf',
+  hermsdorf: 'Reinickendorf',
+  frohnau: 'Reinickendorf',
+  waidmannslust: 'Reinickendorf',
+  lübars: 'Reinickendorf',
+  'märkisches viertel': 'Reinickendorf',
+  konradshöhe: 'Reinickendorf',
+  heiligensee: 'Reinickendorf',
+};
+
 /**
  * Resolves a Berlin postal code, street address, or district name into the exact statutory authorities.
  */
@@ -783,9 +904,11 @@ export function resolveJurisdictionByAddress(addressQuery: string): Jurisdiction
     }
   }
 
-  // 2. Direct District Name Match
+  // 2. Direct District Name Match (Full name or component, e.g. Friedrichshain in Friedrichshain-Kreuzberg)
   for (const [districtKey, data] of Object.entries(DISTRICT_JURISDICTIONS)) {
-    if (clean.includes(districtKey.toLowerCase())) {
+    const lowerKey = districtKey.toLowerCase();
+    const parts = lowerKey.split(/[-–/\s]+/);
+    if (clean.includes(lowerKey) || parts.some((p) => p.length >= 4 && clean.includes(p))) {
       return {
         district: districtKey as BerlinDistrict,
         matchedBy: 'district_name',
@@ -798,7 +921,23 @@ export function resolveJurisdictionByAddress(addressQuery: string): Jurisdiction
     }
   }
 
-  // 3. Street Name Substring Match
+  // 3. Berlin Ortsteile / Localities Match (e.g. Wedding, Kreuzberg, Prenzlauer Berg, Karlshorst)
+  for (const [localityKey, district] of Object.entries(BERLIN_LOCALITIES_TO_DISTRICT)) {
+    if (clean.includes(localityKey)) {
+      const data = DISTRICT_JURISDICTIONS[district];
+      return {
+        district,
+        matchedBy: 'locality',
+        query: localityKey,
+        jobcenter: data.jobcenter,
+        jugendamtRSD: data.jugendamtRSD,
+        sozialeWohnhilfe: data.sozialeWohnhilfe,
+        spdi: data.spdi,
+      };
+    }
+  }
+
+  // 4. Street Name Substring Match
   for (const [streetKey, district] of Object.entries(PROMINENT_STREETS_TO_DISTRICT)) {
     if (clean.includes(streetKey)) {
       const data = DISTRICT_JURISDICTIONS[district];

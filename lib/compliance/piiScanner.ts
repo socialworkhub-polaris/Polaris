@@ -59,8 +59,8 @@ export function scanTextForPII(text?: string | null): PIIScanResult {
     warnings.push('Enthält einen Personen- oder Klientennamen (z. B. Herr/Frau oder Klient: ...).');
   }
 
-  // 6. German Street Address with House Number (e.g. Sonnenallee 120, Karl-Marx-Str. 45)
-  const addressRegex = /\b(?:straße|str\.|allee|damm|platz|weg|ufer|chaussee)\s+\d{1,4}[a-z]?\b/i;
+  // 6. German Street Address with House Number (e.g. Sonnenallee 120, Karl-Marx-Str. 45, Mehringdamm 12)
+  const addressRegex = /\b[A-Za-zÄÖÜäöüß.\- ]*(?:straße|str\.|allee|damm|platz|weg|ufer|chaussee|gasse|ring|zeile|pfad)\s+\d{1,4}[a-z]?\b/i;
   if (addressRegex.test(text)) {
     detectedTypes.push('Wohnadresse');
     warnings.push('Enthält eine spezifische Straßenadresse mit Hausnummer.');

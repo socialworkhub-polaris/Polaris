@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Snowflake,
   PhoneCall,
@@ -26,6 +26,14 @@ export const KaeltehilfeBanner: React.FC<KaeltehilfeBannerProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
+  const seasonString = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-indexed: Nov = 10
+    const startYear = month < 6 ? year - 1 : year;
+    return `Saison ${startYear}/${startYear + 1}`;
+  }, []);
+
   return (
     <div className="bg-gradient-to-r from-cyan-900 via-sky-950 to-blue-950 text-white rounded-xl border border-cyan-800/80 shadow-md p-3.5 sm:p-4 mb-3.5">
       {/* Header */}
@@ -40,7 +48,7 @@ export const KaeltehilfeBanner: React.FC<KaeltehilfeBannerProps> = ({
                 Berliner Kältehilfe & Notversorgung
               </h3>
               <span className="hidden sm:inline-block px-2 py-0.2 text-[10px] font-semibold bg-cyan-400/20 text-cyan-200 border border-cyan-400/30 rounded-full">
-                Saison 2024/2025
+                {seasonString}
               </span>
             </div>
             <p className="text-[11px] text-cyan-200/80">
