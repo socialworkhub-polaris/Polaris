@@ -458,7 +458,7 @@ const AgencyCard: React.FC<{
         </a>
 
         <a
-          href={getTransitDirectionsUrl(`${agency.name}, ${agency.address}`)}
+          href={getTransitDirectionsUrl(agency.address)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-blue-900 bg-blue-100 hover:bg-blue-200 rounded border border-blue-300 transition-colors"

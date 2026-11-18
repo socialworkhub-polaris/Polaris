@@ -24,6 +24,9 @@ import {
   Calendar,
   Flag,
   Navigation,
+  DoorOpen,
+  FileCheck2,
+  Snowflake,
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
 import { ReportCorrectionModal } from './ReportCorrectionModal';
@@ -32,6 +35,7 @@ import { TeamNotesSection } from './TeamNotesSection';
 import { TeamModal } from './TeamModal';
 import { QRCodeCard } from './QRCodeCard';
 import { getBVGRouteUrl, getTransitDirectionsUrl } from '@/lib/geolocation';
+import { getPrimaryPhoneNumber, getCleanTelUri } from '@/lib/phoneUtils';
 
 interface DetailDrawerProps {
   facility: Facility | null;
@@ -62,14 +66,15 @@ export const DetailDrawer: React.FC<DetailDrawerProps> = ({
 
   const formatShareText = () => {
     if (!facility) return '';
+    const primaryPhone = getPrimaryPhoneNumber(facility.contact?.phone);
     let text = `📍 *${facility.name}*`;
     if (facility.subTitle) text += ` (${facility.subTitle})`;
     text += `\n🏢 ${facility.address.street}, ${facility.address.zipCode} Berlin`;
     if (facility.transit?.station) {
       text += `\n🚇 ${facility.transit.station} (${facility.transit.lines.join(', ')}) - ${facility.transit.walkingTime}`;
     }
-    if (facility.contact?.phone) {
-      text += `\n📞 Tel: ${facility.contact.phone}`;
+    if (primaryPhone) {
+      text += `\n📞 Tel: ${primaryPhone}`;
     }
     if (facility.openingHours?.walkIn) {
       text += `\n⏰ Offene Sprechzeiten: ${facility.openingHours.walkIn}`;
@@ -101,6 +106,13 @@ export const DetailDrawer: React.FC<DetailDrawerProps> = ({
 
   const isAmt = facility.institutionType === 'amt';
   const isNiedrigschwellig = facility.accessType === 'niedrigschwellig';
+  const primaryPhone = getPrimaryPhoneNumber(facility.contact?.phone);
+  const primaryEmergencyPhone = getPrimaryPhoneNumber(facility.contact?.emergencyPhone);
+  const isKaeltehilfe = Boolean(
+    `${facility.name} ${facility.subTitle} ${facility.internalWorkerNotes || ''} ${(facility.targetGroups || []).join(' ')}`
+      .toLowerCase()
+      .match(/kälte|notübernachtung|wärmestube|nachtcafé|sleep-in|obdachlos|wohnungslos/)
+  );
 
   const handleCopyNote = () => {
     const note = `[Polaris Vermerk - Weiterleitung/Triage]
@@ -108,8 +120,8 @@ Einrichtung: ${facility.name} (${isAmt ? 'Behörde/Amt' : 'Freier Träger'})
 Bezirk: ${facility.district}
 Adresse: ${facility.address.street}, ${facility.address.zipCode} Berlin
 ÖPNV: ${facility.transit.station} (${facility.transit.lines.join(', ')} - ${facility.transit.walkingTime})
-Telefon: ${facility.contact.phone}
-Notfall-Hotline: ${facility.contact.emergencyPhone || 'k.A.'}
+Telefon: ${primaryPhone || '-'}
+Notfall-Hotline: ${primaryEmergencyPhone || 'k.A.'}
 E-Mail: ${facility.contact.email}
 Rechtsgrundlagen: ${facility.legalBases.join(', ')}
 Offene Sprechzeit: ${facility.openingHours.walkIn}
@@ -149,15 +161,29 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
                   </span>
                 )}
 
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                    isNiedrigschwellig
-                      ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                      : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                  }`}
-                >
-                  {isNiedrigschwellig ? 'Offen / Niedrigschwellig' : 'Antragspflichtig (SGB)'}
-                </span>
+                {isNiedrigschwellig ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                    <DoorOpen className="w-3.5 h-3.5" />
+                    Offen / Niedrigschwellig
+                  </span>
+                ) : facility.accessType === 'antragspflichtig' ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <FileCheck2 className="w-3.5 h-3.5" />
+                    Antragspflichtig (SGB)
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Terminvereinbarung
+                  </span>
+                )}
+
+                {isKaeltehilfe && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/25 text-sky-200 border border-sky-400/40">
+                    <Snowflake className="w-3.5 h-3.5 text-sky-300" />
+                    Kältehilfe
+                  </span>
+                )}
 
                 <span className="inline-flex items-center gap-1 text-xs text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded-full">
                   <MapPin className="w-3 h-3 text-slate-400" />
@@ -234,7 +260,10 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
               {/* 1-Tap Routing Buttons & QR Code */}
               <div className="pt-2 border-t border-slate-200/80 flex flex-wrap items-center gap-2">
                 <a
-                  href={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  href={getTransitDirectionsUrl(
+                    `${facility.address.street}, ${facility.address.zipCode} Berlin`,
+                    facility.coordinates
+                  )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-2xs"
@@ -257,7 +286,10 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
 
               <div className="pt-2">
                 <QRCodeCard
-                  value={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  value={getTransitDirectionsUrl(
+                    `${facility.address.street}, ${facility.address.zipCode} Berlin`,
+                    facility.coordinates
+                  )}
                   label="Klienten-Navigation (QR-Code)"
                   sublabel="Klient*in kann den Code direkt vom Bildschirm scannen für die Live-Navigation"
                   size={95}
@@ -298,21 +330,25 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes}`;
                 <div className="space-y-2 text-xs">
                   <div>
                     <span className="text-slate-400 block font-medium">Telefonische Zentrale / Intake:</span>
-                    <a
-                      href={`tel:${facility.contact.phone.replace(/\s+/g, '')}`}
-                      className="text-blue-600 hover:underline font-bold text-sm"
-                    >
-                      {facility.contact.phone}
-                    </a>
+                    {primaryPhone ? (
+                      <a
+                        href={getCleanTelUri(primaryPhone)}
+                        className="text-blue-600 hover:underline font-bold text-sm"
+                      >
+                        {primaryPhone}
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">Keine Nummer hinterlegt</span>
+                    )}
                   </div>
-                  {facility.contact.emergencyPhone && (
+                  {primaryEmergencyPhone && (
                     <div>
                       <span className="text-red-500 block font-medium">Notfall-Hotline / Krisentelefon:</span>
                       <a
-                        href={`tel:${facility.contact.emergencyPhone.replace(/\s+/g, '')}`}
+                        href={getCleanTelUri(primaryEmergencyPhone)}
                         className="text-red-700 hover:underline font-bold"
                       >
-                        {facility.contact.emergencyPhone}
+                        {primaryEmergencyPhone}
                       </a>
                     </div>
                   )}

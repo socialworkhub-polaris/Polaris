@@ -98,7 +98,6 @@ const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = DEFAULT_PMTI
         backgroundColor: '#a5d7f8',
         maxDataZoom: 14,
         maxZoom: 14,
-        attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (Lokal & DSGVO-konform)',
       });
 
       layer.addTo(map);
@@ -110,6 +109,24 @@ const ProtomapsLayer: React.FC<{ tileUrl?: string }> = ({ tileUrl = DEFAULT_PMTI
       console.warn('Protomaps layer initialization error:', err);
     }
   }, [map, tileUrl]);
+
+  return null;
+};
+
+// Clean, legal & GDPR-compliant OpenStreetMap attribution without the intrusive "Leaflet" library prefix
+const AttributionController: React.FC = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    const attr = L.control.attribution({ prefix: false, position: 'bottomright' });
+    attr.addAttribution('© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (DSGVO-konform)');
+    attr.addTo(map);
+
+    return () => {
+      attr.remove();
+    };
+  }, [map]);
 
   return null;
 };
@@ -161,16 +178,34 @@ const DistrictController: React.FC<{ selectedDistrict?: BerlinDistrict | 'all' }
   return null;
 };
 
-// Create custom colored SVG marker icons for Ämter (Blue) and Träger (Emerald)
-const createCustomIcon = (isAmt: boolean, isSelected: boolean) => {
-  const bgColor = isAmt ? '#2563eb' : '#059669'; // Blue vs Emerald
+// Helper to identify Kältehilfe & Notübernachtung facilities
+const checkIsKaeltehilfe = (facility: Facility): boolean => {
+  const text = `${facility.name} ${facility.subTitle} ${facility.internalWorkerNotes || ''} ${(facility.targetGroups || []).join(' ')}`.toLowerCase();
+  return (
+    text.includes('kälte') ||
+    text.includes('notübernachtung') ||
+    text.includes('wärmestube') ||
+    text.includes('nachtcafé') ||
+    text.includes('sleep-in') ||
+    text.includes('obdachlos') ||
+    text.includes('wohnungslos')
+  );
+};
+
+// Create custom colored SVG marker icons for Ämter (Blue), Träger (Emerald), and Kältehilfe (Cyan with Snowflake)
+const createCustomIcon = (isAmt: boolean, isSelected: boolean, isKaeltehilfe: boolean = false) => {
+  const bgColor = isKaeltehilfe ? '#0284c7' : isAmt ? '#2563eb' : '#059669'; // Cyan vs Blue vs Emerald
   const ringClass = isSelected
     ? 'ring-4 ring-amber-400 ring-offset-2 scale-125 z-50 shadow-2xl'
     : 'shadow-md hover:scale-110';
 
-  const iconSvg = isAmt
-    ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>`
-    : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
+  const snowflakeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m10 20-1.25-2.5L6 18"/><path d="M10 4 8.75 6.5 6 6"/><path d="m14 20 1.25-2.5L18 18"/><path d="m14 4 1.25 2.5L18 6"/><path d="m17 21-3-6h-4l-3 6"/><path d="m17 3-3 6h-4L7 3"/><path d="m2 12 6 3 1.25-2.5L6 10"/><path d="m20 10-3.25 2.5L18 15l4-3"/><path d="m4 7 6 3v4l-6 3"/><path d="m20 17-6-3v-4l6-3"/></svg>`;
+
+  const amtSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>`;
+
+  const traegerSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
+
+  const iconSvg = isKaeltehilfe ? snowflakeSvg : isAmt ? amtSvg : traegerSvg;
 
   const html = `
     <div class="relative flex items-center justify-center transition-transform duration-200 ${ringClass}" style="width: 34px; height: 34px; border-radius: 50%; background-color: ${bgColor}; border: 2.5px solid white;">
@@ -335,10 +370,11 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         scrollWheelZoom={true}
         className="w-full h-full z-10"
         style={{ minHeight: '100%', background: '#f4f3f0' }}
-        attributionControl={true}
+        attributionControl={false}
       >
         {/* Self-hosted vector tile layer via Protomaps PMTiles */}
         <ProtomapsLayer tileUrl={pmtilesUrl} />
+        <AttributionController />
 
         <MapController selectedFacility={selectedFacility} userLocation={userLocation} />
         <DistrictController selectedDistrict={selectedDistrict} />
@@ -389,13 +425,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         >
           {disambiguatedFacilities.map((facility) => {
             const isAmt = facility.institutionType === 'amt';
+            const isKaeltehilfe = checkIsKaeltehilfe(facility);
             const isSelected = selectedFacility?.id === facility.id;
 
             return (
               <Marker
                 key={facility.id}
                 position={facility.displayCoordinates}
-                icon={createCustomIcon(isAmt, isSelected)}
+                icon={createCustomIcon(isAmt, isSelected, isKaeltehilfe)}
                 // @ts-ignore custom marker property for cluster ratio calculation
                 isAmt={isAmt}
                 eventHandlers={{
@@ -408,10 +445,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
                   <div className="flex items-center justify-between gap-1">
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                        isAmt ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                        isKaeltehilfe
+                          ? 'bg-sky-100 text-sky-800'
+                          : isAmt
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-emerald-100 text-emerald-800'
                       }`}
                     >
-                      {isAmt ? 'Behörde / Amt' : 'Freier Träger / NGO'}
+                      {isKaeltehilfe ? '❄️ Kältehilfe' : isAmt ? 'Behörde / Amt' : 'Freier Träger / NGO'}
                     </span>
                     <span className="text-[11px] font-medium text-slate-500">{facility.district}</span>
                   </div>

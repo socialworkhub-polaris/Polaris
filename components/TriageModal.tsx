@@ -443,7 +443,7 @@ const handlePrint = () => {
               <p className="text-xs text-slate-500 print:text-slate-700">
                 {result 
                   ? `Erstellt am ${new Date().toLocaleDateString('de-DE')} • Bezirk: ${formData.district || 'Berlinweit'}`
-                  : 'Strukturierter Stufenplan mit Notion-Matching & Exa-Websuche'}
+                  : 'Strukturierte Ersteinschätzung & Handlungsplan für die Fallführung'}
               </p>
             </div>
           </div>

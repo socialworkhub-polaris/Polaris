@@ -1,4 +1,5 @@
 import { Facility, BerlinDistrict } from '@/types/facility';
+import { getPrimaryPhoneNumber } from '@/lib/phoneUtils';
 import { IngestionAdapter, IngestionSourceMeta } from '../types';
 import { resolveDistrict, ensureCoordinates } from '../districtResolver';
 
@@ -69,7 +70,7 @@ export class BerlinOpenDataAdapter implements IngestionAdapter {
 
           // Contact parsing
           let email = (data.e_mail || '').replace(/^mailto:/i, '').trim();
-          let phone = (data.telefon || '').trim();
+          let phone = getPrimaryPhoneNumber(data.telefon);
           let rawWebsite = (data.homepage || '').replace(/[\r\n\s]+/g, '').trim();
           let website = rawWebsite
             ? (!/^https?:\/\//i.test(rawWebsite) ? `https://${rawWebsite}` : rawWebsite)
@@ -123,7 +124,7 @@ export class BerlinOpenDataAdapter implements IngestionAdapter {
               phoneHours: 'Zu den regulären Öffnungszeiten erreichbar.',
             },
             intakeRules: {
-              summary: `Offenes Angebot und Beratung im Bezirk ${district}. Trägerschaft: ${traeger}.`,
+              summary: `${data.art || 'Offenes Angebot und Beratung'} im Bezirk ${district}.`,
               procedure: '1. Niedrigschwelliger Erstkontakt vor Ort oder telefonisch. 2. Kostenfreie Erstberatung und Klärung des Anliegens.',
               regionalJurisdiction: `Schwerpunktmäßig für Bürger*innen und Familien aus ${district}.`,
               waitingTimeEstimate: 'Offener Zugang / Keine Wartezeit.',

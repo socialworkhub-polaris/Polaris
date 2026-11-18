@@ -78,7 +78,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     if (filterState.language !== 'all') count++;
     if (filterState.ageGroups.length > 0) count++;
     if (filterState.wheelchairOnly) count++;
-    if (filterState.accessType === 'termin' || filterState.accessType === 'antragspflichtig') count++;
+    if (filterState.accessType !== 'all') count++;
     if (!isSeasonalKaeltehilfe && filterState.kaeltehilfeOnly) count++;
     return count;
   }, [filterState, isSeasonalKaeltehilfe]);
@@ -416,7 +416,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 <label className="block text-slate-600 font-semibold mb-1.5 text-[11px]">
                   Zugangsform
                 </label>
-                <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+                <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
                   <button
                     type="button"
                     onClick={() => handleAccessChange('all')}
@@ -427,6 +427,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     }`}
                   >
                     Alle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAccessChange('niedrigschwellig')}
+                    className={`inline-flex items-center justify-center gap-1 py-1 px-1.5 rounded transition-all cursor-pointer ${
+                      filterState.accessType === 'niedrigschwellig'
+                        ? 'bg-emerald-600 text-white shadow-xs font-semibold'
+                        : 'text-slate-600 hover:text-emerald-700'
+                    }`}
+                  >
+                    <DoorOpen className="w-3 h-3 shrink-0" />
+                    <span>Offen</span>
                   </button>
                   <button
                     type="button"

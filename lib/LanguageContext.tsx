@@ -34,10 +34,10 @@ export const translations = {
     allLanguages: 'Alle Beratungssprachen',
     
     // Mobile Bar & Hotlines
-    hotlinesTitle: 'Streetwork Notfall-Hotlines (Berlin)',
-    quickDial: 'Schnellwahl (1-Tap)',
-    close: 'Schließen',
-    hotlineSub: 'Direkte Notrufnummern für akute Gefährdungslagen im Außendienst.',
+    hotlinesTitle: 'Notfall-Hotlines',
+    quickDial: 'Klicken zum Aufklappen',
+    close: 'Klicken zum Schließen',
+    hotlineSub: 'Wichtige Notruf- und Krisennummern für den Berliner Sozialbereich im Überblick.',
     
     // Drawer & Actions
     openPrint: 'Klienten-Handout drucken',
@@ -82,10 +82,10 @@ export const translations = {
     allLanguages: 'All Consultation Languages',
     
     // Mobile Bar & Hotlines
-    hotlinesTitle: 'Streetwork Emergency Hotlines (Berlin)',
-    quickDial: 'Quick Dial (1-Tap)',
-    close: 'Close',
-    hotlineSub: 'Direct emergency numbers for acute frontline crises.',
+    hotlinesTitle: 'Emergency Hotlines',
+    quickDial: 'Click to expand',
+    close: 'Click to collapse',
+    hotlineSub: 'Direct emergency and crisis numbers for the Berlin social sector at a glance.',
     
     // Drawer & Actions
     openPrint: 'Print Client Handout',

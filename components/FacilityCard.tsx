@@ -19,12 +19,14 @@ import {
   Snowflake,
   AlertTriangle,
   Clock,
+  Calendar,
 } from 'lucide-react';
 import { Facility } from '@/types/facility';
 import { useBookmarks } from '../lib/useBookmarks';
 import { useTeam } from '../lib/TeamContext';
 import { getTransitDirectionsUrl, formatDistance } from '@/lib/geolocation';
 import { getAdmissionStatus, getActiveNightWarning } from '@/lib/kaeltehilfe/capacityEngine';
+import { getPrimaryPhoneNumber, getCleanTelUri } from '@/lib/phoneUtils';
 
 interface FacilityCardProps {
   facility: Facility;
@@ -50,6 +52,30 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({
   const isAmt = facility.institutionType === 'amt';
   const isNiedrigschwellig = facility.accessType === 'niedrigschwellig';
   const teamNotesCount = currentOrganization ? (notesCountByFacility[facility.id] || 0) : 0;
+  const primaryPhone = useMemo(() => getPrimaryPhoneNumber(facility.contact?.phone), [facility.contact?.phone]);
+
+  const focusSummary = useMemo(() => {
+    let summary = facility.intakeRules?.summary || '';
+    if (summary) {
+      summary = summary.replace(/(\. )?Trägerschaft:.*$/i, '').trim();
+      summary = summary.replace(/(\. )?Träger:.*$/i, '').trim();
+      if (summary.startsWith('Offenes Angebot und Beratung im Bezirk')) {
+        const art = facility.subTitle ? facility.subTitle.split('•')[0].trim() : '';
+        const targets = Array.isArray(facility.targetGroups) && facility.targetGroups.length > 0
+          ? facility.targetGroups.slice(0, 2).join(' & ')
+          : '';
+        if (art && art.toLowerCase() !== 'einrichtung') {
+          return targets ? `${art} für ${targets}` : art;
+        }
+        return targets ? `Beratungs- und Freizeitangebote für ${targets}` : 'Offenes Beratungs- und Unterstützungsangebot';
+      }
+      return summary;
+    }
+    if (facility.subTitle) {
+      return facility.subTitle.split('•')[0].trim();
+    }
+    return '';
+  }, [facility]);
 
   // Kältehilfe & Notversorgung Erkennung
   const isKaeltehilfe = useMemo(() => {
@@ -84,7 +110,7 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({
 Einrichtung: ${facility.name} (${isAmt ? 'Behörde/Amt' : 'Freier Träger'})
 Bezirk: ${facility.district} | Adresse: ${facility.address?.street || 'Berlin'}, ${facility.address?.zipCode || ''} Berlin
 ÖPNV: ${facility.transit?.station || 'Berlin'} (${facility.transit?.walkingTime || ''})
-Kontakt: Tel: ${facility.contact?.phone || '-'} | Mail: ${facility.contact?.email || '-'}
+Kontakt: Tel: ${primaryPhone || '-'} | Mail: ${facility.contact?.email || '-'}
 Rechtsgrundlage / Zuordnung: ${(facility.legalBases || []).join(', ')}
 Offene Sprechzeit: ${facility.openingHours?.walkIn || '-'}
 Mitzubringende Unterlagen: ${(facility.requiredDocuments || []).join('; ')}
@@ -135,10 +161,15 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
                 <DoorOpen className="w-3 h-3 text-slate-500 shrink-0" />
                 Offene Sprechzeit
               </span>
-            ) : (
+            ) : facility.accessType === 'antragspflichtig' ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/70">
                 <FileCheck2 className="w-3 h-3 text-amber-600 shrink-0" />
                 Antragspflichtig (SGB)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-sky-50 text-sky-800 border border-sky-200/80">
+                <Calendar className="w-3 h-3 text-sky-600 shrink-0" />
+                Termin erforderlich
               </span>
             )}
 
@@ -148,7 +179,7 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
               {facility.district}
             </span>
 
-            {/* Kältehilfe Einlass-Status Badge (Keine pauschale rote Ampel) */}
+            {/* Kältehilfe Einlass-Status Badge mit Schneeflocke */}
             {isKaeltehilfe && (
               <span
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border ${
@@ -162,7 +193,7 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
                 }`}
                 title={admission.detail}
               >
-                <Clock className="w-3 h-3 shrink-0" />
+                <Snowflake className="w-3 h-3 text-sky-600 shrink-0" />
                 <span>{admission.badge}</span>
               </span>
             )}
@@ -232,7 +263,10 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
             <span className="font-medium text-slate-800">{facility.transit.station}</span>
             <span className="text-slate-400">({facility.transit.walkingTime})</span>
             <a
-              href={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+              href={getTransitDirectionsUrl(
+                `${facility.address.street}, ${facility.address.zipCode} Berlin`,
+                facility.coordinates
+              )}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -269,27 +303,27 @@ Hinweis f. Fallführung: ${facility.internalWorkerNotes || '-'}`;
           </div>
         )}
 
-        {/* Zugang / Klienten-Hinweis */}
-        {facility.intakeRules?.summary && (
-          <div className="text-xs text-slate-700 mb-3.5 ml-1.5 p-2 rounded-lg bg-amber-50/50 border border-amber-200/50 leading-relaxed">
-            <span className="font-semibold text-amber-900">Zugang & Voraussetzung: </span>
-            <span className="line-clamp-2">{facility.intakeRules.summary}</span>
+        {/* Schwerpunkt */}
+        {focusSummary && (
+          <div className="text-xs text-slate-700 mb-3.5 ml-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200/80 leading-relaxed">
+            <span className="font-semibold text-slate-900">Schwerpunkt: </span>
+            <span className="line-clamp-2">{focusSummary}</span>
           </div>
         )}
       </div>
 
       {/* Fußzeile: Kontakt & Aktionen */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 text-xs ml-1.5">
-        {/* Telefon-Direktlink */}
-        {facility.contact?.phone ? (
+        {/* Telefon-Direktlink (Zentrale Hotline) */}
+        {primaryPhone ? (
           <a
-            href={`tel:${facility.contact.phone.replace(/\s+/g, '')}`}
+            href={getCleanTelUri(primaryPhone)}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1.5 text-slate-700 hover:text-blue-600 font-medium transition-colors"
-            title="Direkt anrufen"
+            title="Zentrale Hotline anrufen"
           >
             <Phone className="w-3.5 h-3.5 text-slate-400" />
-            <span>{facility.contact.phone}</span>
+            <span>{primaryPhone}</span>
           </a>
         ) : (
           <div className="inline-flex items-center gap-1.5 text-slate-400">

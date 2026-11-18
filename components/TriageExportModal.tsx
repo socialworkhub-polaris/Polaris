@@ -666,7 +666,7 @@ Wichtige Schritte für Sie:
                           </span>
                         </div>
                         <QRCodeCard
-                          value={getTransitDirectionsUrl(`${primaryFacility.name}, ${addrStr}, Berlin`)}
+                          value={getTransitDirectionsUrl(`${addrStr}, Berlin`, primaryFacility.coordinates)}
                           label="Live-Navigation"
                           sublabel="Scannen für Google Maps & ÖPNV"
                           size={80}

@@ -96,8 +96,8 @@ export default function EmergencyBar() {
             <span className="hidden sm:inline">{t.hotlinesTitle}</span>
             <span className="sm:hidden">Notfallnummern</span>
           </span>
-          <span className="text-[11px] text-slate-400 flex items-center gap-0.5 ml-1">
-            <span>({isOpen ? t.close : t.quickDial})</span>
+          <span className="text-[11px] text-slate-300 flex items-center gap-1 ml-1.5 font-normal">
+            <span>{isOpen ? t.close : t.quickDial}</span>
             {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
           </span>
         </button>

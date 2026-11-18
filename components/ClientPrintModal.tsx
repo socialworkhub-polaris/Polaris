@@ -20,6 +20,7 @@ import {
 import { Facility } from '@/types/facility';
 import { QRCodeCard } from './QRCodeCard';
 import { getBVGRouteUrl, getTransitDirectionsUrl } from '@/lib/geolocation';
+import { getPrimaryPhoneNumber, getCleanTelUri } from '@/lib/phoneUtils';
 
 interface ClientPrintModalProps {
   facility: Facility | null;
@@ -45,9 +46,13 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
 
   const handleDownloadHtml = () => {
     if (!facility) return;
-    const dest = `${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`;
+    const cleanPhone = getPrimaryPhoneNumber(facility.contact?.phone);
+    const telUri = getCleanTelUri(cleanPhone);
     const bvgUrl = getBVGRouteUrl(`${facility.address.street}, ${facility.address.zipCode} Berlin`);
-    const mapsUrl = getTransitDirectionsUrl(dest);
+    const mapsUrl = getTransitDirectionsUrl(
+      `${facility.address.street}, ${facility.address.zipCode} Berlin`,
+      facility.coordinates
+    );
     const safeWorkerNote = workerNote
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -84,7 +89,7 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
     <div class="no-print" style="margin-top: 12px;">
       <a class="btn" href="${mapsUrl}" target="_blank">🗺️ ÖPNV Route (Google Maps)</a>
       <a class="btn" href="${bvgUrl}" target="_blank" style="background: #475569;">🚇 BVG Fahrinfo</a>
-      ${facility.contact?.phone ? `<a class="btn" href="tel:${facility.contact.phone.replace(/\\s+/g, '')}" style="background: #16a34a;">📞 ${facility.contact.phone}</a>` : ''}
+      ${cleanPhone ? `<a class="btn" href="${telUri}" style="background: #16a34a;">📞 ${cleanPhone}</a>` : ''}
     </div>
   </div>
 
@@ -243,7 +248,10 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
 
               <div className="flex items-center justify-center">
                 <QRCodeCard
-                  value={getTransitDirectionsUrl(`${facility.name}, ${facility.address.street}, ${facility.address.zipCode} Berlin`)}
+                  value={getTransitDirectionsUrl(
+                    `${facility.address.street}, ${facility.address.zipCode} Berlin`,
+                    facility.coordinates
+                  )}
                   label="Handy-Navigation"
                   sublabel="Kamera auf Code richten für Google Maps & BVG"
                   size={85}
@@ -279,12 +287,16 @@ export const ClientPrintModal: React.FC<ClientPrintModalProps> = ({
                 <div className="space-y-1 text-xs">
                   <p>
                     <span className="text-slate-500">Telefon Zentrale:</span>{' '}
-                    <span className="text-sm font-bold text-slate-900">{facility.contact.phone}</span>
+                    <span className="text-sm font-bold text-slate-900">
+                      {getPrimaryPhoneNumber(facility.contact.phone) || '–'}
+                    </span>
                   </p>
                   {facility.contact.emergencyPhone && (
                     <p>
                       <span className="text-red-600 font-semibold">Notfall / Akut:</span>{' '}
-                      <span className="font-bold text-slate-900">{facility.contact.emergencyPhone}</span>
+                      <span className="font-bold text-slate-900">
+                        {getPrimaryPhoneNumber(facility.contact.emergencyPhone)}
+                      </span>
                     </p>
                   )}
                   <p>
