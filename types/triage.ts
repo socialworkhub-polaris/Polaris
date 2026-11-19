@@ -52,4 +52,13 @@ export interface TriageResponse {
   summary: string;
   legalContext: string[];
   steps: TriageStep[];
+  isDeterministicFallback?: boolean;
+  fallbackReason?: 'AUTH_REQUIRED' | 'LIMIT_REACHED' | 'OFFLINE' | 'AI_ERROR';
+  message?: string;
+  usage?: {
+    used: number;
+    max: number;
+    unlimited: boolean;
+    allowed: boolean;
+  };
 }

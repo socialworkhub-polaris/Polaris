@@ -99,97 +99,81 @@ export async function POST(req: Request) {
     );
   }
 
-  // 2. Authentication check (Bearer Token)
+  // 2. Authentication & Quota check (Graceful Fallback instead of lockout)
   const authHeader = req.headers.get('authorization') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-  if (!token) {
-    return NextResponse.json(
-      {
-        error: 'AUTH_REQUIRED',
-        message: 'Bitte erstelle ein kostenloses Fachkraft-Konto oder melde dich an, um die KI-Triage zu nutzen.',
-      },
-      { status: 401 }
-    );
-  }
-
-  const { data: userData, error: userError } = await supabase.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return NextResponse.json(
-      {
-        error: 'AUTH_REQUIRED',
-        message: 'Sitzung abgelaufen. Bitte erneut anmelden.',
-      },
-      { status: 401 }
-    );
-  }
-
-  // 3. Monthly Triage Quota Check (Max 3 / Month for free users)
+  let isDeterministicFallback = false;
+  let fallbackReason: 'AUTH_REQUIRED' | 'LIMIT_REACHED' | undefined;
+  let fallbackMessage = '';
   const currentMonth = new Date().toISOString().slice(0, 7);
-  let usageInfo = { allowed: true, unlimited: false, used: 1, max: 3 };
+  let usageInfo = { allowed: true, unlimited: false, used: 0, max: 3 };
 
-  try {
-    const userClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      }
-    );
-
-    const { data: limitData, error: limitErr } = await userClient.rpc('check_and_increment_triage', {
-      p_month_year: currentMonth,
-      p_max_allowed: 3,
-    });
-
-    if (limitErr) {
-      console.warn('RPC check_and_increment_triage fallback:', limitErr.message);
-      const { data: row } = await userClient
-        .from('user_triage_usage')
-        .select('count')
-        .eq('user_id', userData.user.id)
-        .eq('month_year', currentMonth)
-        .maybeSingle();
-
-      const currentCount = row?.count || 0;
-      if (currentCount >= 3) {
-        return NextResponse.json(
+  if (!token) {
+    isDeterministicFallback = true;
+    fallbackReason = 'AUTH_REQUIRED';
+    fallbackMessage = 'Deterministischer 0-Token Stufenplan aktiv. Melde dich kostenfrei an für erweitertes KI-Clearing (Mistral EU).';
+  } else {
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      isDeterministicFallback = true;
+      fallbackReason = 'AUTH_REQUIRED';
+      fallbackMessage = 'Sitzung abgelaufen. Deterministischer 0-Token Stufenplan aktiv. Bitte erneut anmelden für KI-Funktionen.';
+    } else {
+      // 3. Monthly Triage Quota Check (Max 3 / Month for free users)
+      try {
+        const userClient = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
           {
-            error: 'LIMIT_REACHED',
-            used: currentCount,
-            max: 3,
-            message: 'Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht.',
-          },
-          { status: 403 }
+            global: { headers: { Authorization: `Bearer ${token}` } },
+          }
         );
-      }
 
-      await userClient.from('user_triage_usage').upsert(
-        {
-          user_id: userData.user.id,
-          month_year: currentMonth,
-          count: currentCount + 1,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,month_year' }
-      );
-      usageInfo = { allowed: true, unlimited: false, used: currentCount + 1, max: 3 };
-    } else if (limitData) {
-      if (!limitData.allowed) {
-        return NextResponse.json(
-          {
-            error: 'LIMIT_REACHED',
-            used: limitData.used,
-            max: limitData.max,
-            message: 'Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht.',
-          },
-          { status: 403 }
-        );
+        const { data: limitData, error: limitErr } = await userClient.rpc('check_and_increment_triage', {
+          p_month_year: currentMonth,
+          p_max_allowed: 3,
+        });
+
+        if (limitErr) {
+          console.warn('RPC check_and_increment_triage fallback:', limitErr.message);
+          const { data: row } = await userClient
+            .from('user_triage_usage')
+            .select('count')
+            .eq('user_id', userData.user.id)
+            .eq('month_year', currentMonth)
+            .maybeSingle();
+
+          const currentCount = row?.count || 0;
+          if (currentCount >= 3) {
+            isDeterministicFallback = true;
+            fallbackReason = 'LIMIT_REACHED';
+            fallbackMessage = 'Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht. Deterministischer 0-Token Stufenplan aktiv (unbegrenzt nutzbar).';
+            usageInfo = { allowed: false, unlimited: false, used: currentCount, max: 3 };
+          } else {
+            await userClient.from('user_triage_usage').upsert(
+              {
+                user_id: userData.user.id,
+                month_year: currentMonth,
+                count: currentCount + 1,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id,month_year' }
+            );
+            usageInfo = { allowed: true, unlimited: false, used: currentCount + 1, max: 3 };
+          }
+        } else if (limitData) {
+          if (!limitData.allowed) {
+            isDeterministicFallback = true;
+            fallbackReason = 'LIMIT_REACHED';
+            fallbackMessage = 'Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht. Deterministischer 0-Token Stufenplan aktiv (unbegrenzt nutzbar).';
+          }
+          usageInfo = limitData;
+        }
+      } catch (err) {
+        console.warn('Could not verify triage quota:', err);
       }
-      usageInfo = limitData;
     }
-  } catch (err) {
-    console.warn('Could not verify triage quota:', err);
   }
 
   let input: TriageInput;
@@ -222,6 +206,18 @@ export async function POST(req: Request) {
     ? candidateFacilities
     : citywideFallback.slice(0, 6);
 
+  // If deterministic fallback is active (unauthenticated or quota reached)
+  if (isDeterministicFallback) {
+    const fallbackPlan = generateDeterministicTriage(input, activeCandidates);
+    return NextResponse.json({
+      ...fallbackPlan,
+      usage: usageInfo,
+      isDeterministicFallback: true,
+      fallbackReason,
+      message: fallbackMessage,
+    });
+  }
+
   // Compact manifest for LLM prompt
   const miniFacilities = activeCandidates.map((f: any) => ({
     id: f.id,
@@ -233,6 +229,8 @@ export async function POST(req: Request) {
 
   try {
     const isMinor = input.clientAge !== undefined && input.clientAge < 18;
+    const isYoungAdult = input.clientAge !== undefined && input.clientAge >= 18 && input.clientAge <= 21;
+    const isEuCitizenWithoutJob = input.residenceStatus === 'eu_citizen' && (input.benefitStatus === 'none' || input.benefitStatus === 'unknown');
     const cleanNotes = sanitizeNotes(input.notes);
 
     const systemPrompt = `
@@ -242,13 +240,23 @@ WICHTIGE FACHLICHE REGELN:
 1. MINDERJÄHRIGE (< 18 Jahre):
    - Zuständigkeit liegt AUSSCHLIESSLICH im SGB VIII (Kinder- und Jugendhilfe, RSD/Jugendamt, Erziehungsberatung).
    - NIEMALS Obdachlosenunterkünfte, § 67 SGB XII oder Jobcenter für Minderjährige vorschlagen!
-2. HÄUSLICHE GEWALT:
+2. JUNGE VOLLJÄHRIGE (18–21 Jahre):
+   - Vorrangig Hilfen für junge Volljährige (§ 41 SGB VIII) und jugendspezifische Notaufnahmen / Sleep-Ins prüfen. Nicht ungefiltert in reguläre Erwachsenen-Männerunterkünfte vermitteln.
+3. EU-BÜRGER OHNE LEISTUNGSBEZUG / ERWERBSTÄTIGKEIT:
+   - § 7 Abs. 1 Satz 2 SGB II schließt Bürgergeld ohne Arbeitnehmerfreizügigkeit aus (kein Jobcenter-Erstgang!).
+   - Vorrangig Überbrückungsleistungen nach § 23 Abs. 3 SGB XII beim Sozialamt für bis zu 1 Monat, Rückreisehilfen (§ 23 Abs. 3a SGB XII), Kältehilfeschutz via ASOG und Europaberatung.
+4. FEHLENDE POSTALISCHE ERREICHBARKEIT:
+   - Fehlt eine Melde-/Postadresse: Zwingend als Vorbedingung oder Schritt 1 die Einrichtung einer postalischen Erreichbarkeitsanschrift (z. B. Diakonie, Caritas, Tagesstätte) festlegen, da Anträge sonst nach §§ 60 ff. SGB I unwirksam bleiben.
+5. HÄUSLICHE GEWALT:
    - Bei häuslicher Gewalt hat der Schutz Vorrang: Immer Notfallkontakt BIG Hotline (030 611 03 00) oder Frauenkrisentelefon nennen.
-3. GESICHERTER WOHNRAUM:
+6. AKUTE OBDACHLOSIGKEIT & KÄLTEHILFE (LOGISTIK):
+   - Wegen häufiger Vollbelegung: Zur Bettenabfrage immer auf die Kältehilfe-Clearingstelle der GEBEWO (030 34 39 70 37, 19–23 Uhr) oder den Kältebus (0178 523 58 38) verweisen.
+   - Bei Haustieren (Hunden): Ausdrücklich darauf hinweisen, dass Hundehaltung nur in sehr wenigen Einrichtungen (z.B. Franklinstraße) erlaubt ist.
+7. GESICHERTER WOHNRAUM:
    - Bei vorhandenem Wohnraum keine Notunterkünfte zuweisen.
-4. BEHÖRDEN-ZUGANG:
+8. BEHÖRDEN-ZUGANG:
    - Bei Ämtern (Jobcenter, Jugendamt, Sozialamt) immer darauf hinweisen: "Offene Notfallsprechstunde (Terminvereinbarung empfohlen)".
-5. ZUORDNUNG:
+9. ZUORDNUNG:
    - Wähle für jeden Schritt eine passende facilityId AUSSCHLIESSLICH aus dieser Liste:
 ${JSON.stringify(miniFacilities)}
    - Wenn keine Einrichtung aus der Liste exakt zum Schritt passt, setze "facilityId": null.
@@ -271,12 +279,14 @@ JSON-SCHEMA:
 
     const userPrompt = `
 Klientendaten:
-- Alter: ${input.clientAge ?? 'Unbekannt'} ${isMinor ? '(MINDERJÄHRIG - SGB VIII ZWINGEND!)' : ''}
+- Alter: ${input.clientAge ?? 'Unbekannt'} ${isMinor ? '(MINDERJÄHRIG - SGB VIII ZWINGEND!)' : isYoungAdult ? '(JUNGER VOLLJÄHRIGER - § 41 SGB VIII PRÜFEN!)' : ''}
 - Meldebezirk: ${input.district || 'Ungeklärt / Berlin'}
 - Wohnsituation: ${input.housingStatus}
-- Aufenthaltsstatus: ${input.residenceStatus}
+- Aufenthaltsstatus: ${input.residenceStatus} ${isEuCitizenWithoutJob ? '(EU-BÜRGER OHNE JOB - § 7 SGB II AUSSCHLUSS, § 23 SGB XII BEIM SOZIALAMT!)' : ''}
 - Leistungsbezug: ${input.benefitStatus}
 - Dringlichkeit: ${input.urgency}
+- Postadresse vorhanden: ${input.hasPostalAddress ? 'JA' : 'NEIN (KEINE POSTALISCHE ERREICHBARKEIT - VORRANGIG EINRICHTEN!)'}
+- Haustier vorhanden: ${input.hasPet ? 'JA (Hundeplätze stark kontingentiert - Vorab-Clearing nötig)' : 'NEIN'}
 - Sucht-/SpDi-Bedarf: ${input.needsSubstanceOrMentalSupport ? 'JA' : 'NEIN'}
 - Häusliche Gewalt: ${input.isDomesticViolenceVictim ? 'JA - AKUTER SCHUTZBEDARF' : 'NEIN'}
 - Schulden: ${input.hasDebtIssues ? 'JA' : 'NEIN'}

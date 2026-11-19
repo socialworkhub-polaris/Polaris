@@ -143,6 +143,8 @@ export function prefilterRelevantFacilities(input: TriageInput, allFacilities: F
 export function generateDeterministicTriage(input: TriageInput, allFacilities: Facility[] = []): TriageResponse {
   const targetDistrict = input.district?.trim() || 'Berlin';
   const isMinor = input.clientAge !== undefined && input.clientAge < 18;
+  const isYoungAdult = input.clientAge !== undefined && input.clientAge >= 18 && input.clientAge <= 21;
+  const isEuCitizenWithoutBenefits = input.residenceStatus === 'eu_citizen' && (input.benefitStatus === 'none' || input.benefitStatus === 'unknown');
   const candidates = prefilterRelevantFacilities(input, allFacilities);
 
   // Helper to pick candidate matching criteria
@@ -152,6 +154,10 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
     const fromAll = allFacilities.filter(predicate);
     return fromAll.slice(0, 1);
   };
+
+  const postalWarningDoc = !input.hasPostalAddress
+    ? 'Dringend: Postadresse einrichten (z. B. Beratungsstelle/Diakonie), da Anträge nach §§ 60 ff. SGB I ohne Erreichbarkeit abgelehnt werden'
+    : null;
 
   // -------------------------------------------------------------
   // Scenario A: Minor (< 18 years) -> Strict SGB VIII Mandate
@@ -235,6 +241,7 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
           requiredDocs: [
             input.hasIdOrPassport ? 'Ausweisdokument' : 'Ersatzidentitätsklärung',
             'Kontoauszüge (falls zugänglich)',
+            ...(postalWarningDoc ? [postalWarningDoc] : []),
           ],
           matchedFacilities: statutoryAmt,
         },
@@ -243,7 +250,107 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
   }
 
   // -------------------------------------------------------------
-  // Scenario C: Rent Arrears / Eviction Threat (Wohnraumerhalt)
+  // Scenario C: Young Adults / Care Leavers (18–21 Jahre)
+  // -------------------------------------------------------------
+  if (isYoungAdult && (input.housingStatus === 'homeless' || input.housingStatus === 'precarious' || input.urgency === 'acute')) {
+    const youthShelters = findMatch((f) => {
+      const n = f.name.toLowerCase();
+      return n.includes('jugendnotdienst') || n.includes('sleep-in') || n.includes('jung') || n.includes('kub');
+    });
+
+    const youthAuthority = findMatch((f) => {
+      const n = f.name.toLowerCase();
+      return n.includes('jugendamt') || n.includes('u25') || n.includes('jobcenter');
+    });
+
+    return {
+      summary: `Hilfen für junge Volljährige (§ 41 SGB VIII / U25-Clearing) im Bezirk ${targetDistrict}. Schutz vor Erwachsenen-Obdachlosenunterkünften.`,
+      legalContext: [
+        '§ 41 SGB VIII (Hilfe für junge Volljährige, Nachbetreuung)',
+        '§ 36 SGB VIII / § 34 SGB VIII (Clearing und betreutes Jugendwohnen)',
+        'SGB II (U25-Sonderregelungen bei Erstausbildung / Wohnraumbedarf)',
+      ],
+      steps: [
+        {
+          phase: 'sofort',
+          title: 'Jugendspezifische Notaufnahme / Sleep-In (U21)',
+          action: 'Unterbringung in einer jugendspezifischen Notschlafstelle oder Kontaktaufnahme Jugendnotdienst zur Vermeidung von Gefährdung in Erwachsenen-Männerunterkünften.',
+          requiredDocs: [
+            input.hasIdOrPassport ? 'Personalausweis / Pass' : 'Identitätsklärung vor Ort',
+          ],
+          matchedFacilities: youthShelters,
+        },
+        {
+          phase: 'behoerde',
+          title: 'Antrag auf Hilfe für junge Volljährige beim Jugendamt (RSD)',
+          action: `Antragstellung nach § 41 SGB VIII beim Jugendamt ${targetDistrict} zur Gewährung von betreutem Jugendwohnen und sozialpädagogischer Einzelfallhilfe.`,
+          requiredDocs: [
+            'Ausweisdokument',
+            'Schul-/Ausbildungsnachweise (falls vorhanden)',
+            ...(postalWarningDoc ? [postalWarningDoc] : []),
+          ],
+          matchedFacilities: youthAuthority,
+        },
+      ],
+    };
+  }
+
+  // -------------------------------------------------------------
+  // Scenario D: EU-Bürger ohne Erwerbstätigkeit (§ 23 SGB XII & ASOG)
+  // -------------------------------------------------------------
+  if (isEuCitizenWithoutBenefits && (input.housingStatus === 'homeless' || input.urgency === 'acute' || input.urgency === 'high')) {
+    const clearingFacilities = findMatch((f) => {
+      const n = f.name.toLowerCase();
+      return n.includes('gebewo') || n.includes('clearing') || n.includes('kälte') || n.includes('stadtmission');
+    });
+
+    const euAdvisory = findMatch((f) => {
+      const n = f.name.toLowerCase();
+      return n.includes('beratung') || n.includes('migration') || n.includes('caritas') || n.includes('diakonie');
+    });
+
+    return {
+      summary: `Überbrückungsleistungen & Kälteschutz für Unionsbürger (Bezirk ${targetDistrict}). § 7 SGB II Leistungsausschluss greift.`,
+      legalContext: [
+        '§ 7 Abs. 1 Satz 2 SGB II (Leistungsausschluss Bürgergeld ohne Arbeitnehmerstatus)',
+        '§ 23 Abs. 3 SGB XII (Überbrückungsleistungen: Ernährung, Körperpflege, Unterkunft bis zu 1 Monat)',
+        '§ 23 Abs. 3a SGB XII (Übernahme von Rückreisekosten ins Herkunftsland)',
+        'ASOG Berlin (Ordnungsbehördliche Notunterbringung zur Lebensrettung / Kälteabwehr)',
+      ],
+      steps: [
+        {
+          phase: 'sofort',
+          title: 'Kältehilfe-Clearing & Akutübernachtung',
+          action: 'Zentrale Platzabfrage bei der GEBEWO-Clearingstelle (030 34 39 70 37, 19–23 Uhr) oder Kältebus (0178 523 58 38) zur Akutunterbringung.',
+          requiredDocs: [
+            input.hasIdOrPassport ? 'EU-Pass / ID-Card' : 'Vorsprache auch ohne Passdokument',
+          ],
+          matchedFacilities: clearingFacilities,
+        },
+        {
+          phase: 'behoerde',
+          title: 'Antrag auf Überbrückungsleistungen (§ 23 Abs. 3 SGB XII) beim Sozialamt',
+          action: `Vorsprache im Sozialamt ${targetDistrict} (NICHT Jobcenter!). Beantragung von 1-Monats-Überbrückungsleistungen und Prüfung von Rückkehrhilfen.`,
+          requiredDocs: [
+            'EU-Ausweisdokument',
+            'Nachweis über Einreisedatum (Ticket/Meldebescheinigung, falls vorhanden)',
+            ...(postalWarningDoc ? [postalWarningDoc] : []),
+          ],
+          matchedFacilities: findMatch((f) => f.institutionType === 'amt'),
+        },
+        {
+          phase: 'beratung',
+          title: 'Europaberatung für Unionsbürger (Migrationsfachdienst)',
+          action: 'Rechtskreis- und Freizügigkeitsprüfung (z. B. Frostschutzengel, EUTB oder Fachberatungsstellen für EU-Bürger).',
+          requiredDocs: ['Alle vorhandenen Ausweis- und Meldedokumente'],
+          matchedFacilities: euAdvisory,
+        },
+      ],
+    };
+  }
+
+  // -------------------------------------------------------------
+  // Scenario E: Rent Arrears / Eviction Threat (Wohnraumerhalt)
   // -------------------------------------------------------------
   if (input.housingStatus === 'rent_threatened') {
     const sozwf = findMatch((f) => {
@@ -273,6 +380,7 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
             'Kündigungsschreiben oder Räumungsklage',
             'Mietkontoauszug des Vermieters über den Rückstand',
             'Kontoauszüge der letzten 3 Monate',
+            ...(postalWarningDoc ? [postalWarningDoc] : []),
           ],
           matchedFacilities: sozwf,
         },
@@ -288,7 +396,7 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
   }
 
   // -------------------------------------------------------------
-  // Scenario D: Acute Homelessness (Akut obdachlos / Straße)
+  // Scenario F: Acute Homelessness (Akut obdachlos / Straße)
   // -------------------------------------------------------------
   if (input.housingStatus === 'homeless' || input.urgency === 'acute') {
     const emergencyShelters = findMatch((f) => {
@@ -308,6 +416,10 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
       return f.institutionType === 'amt' && (n.includes('sozialamt') || n.includes('wohnhilfe') || n.includes('amt'));
     });
 
+    const petNotice = input.hasPet
+      ? 'Achtung: Hundehaltung nur in wenigen NUKs gestattet (z. B. Franklinstraße, max. 1-2 Plätze). Unbedingt vorab anrufen!'
+      : undefined;
+
     return {
       summary: `Akute Notunterbringung und Existenzsicherung für den Bezirk ${targetDistrict} (ASOG Berlin & SGB XII).`,
       legalContext: [
@@ -318,8 +430,8 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
       steps: [
         {
           phase: 'sofort',
-          title: 'Niedrigschwellige Notübernachtung / Tagesstätte',
-          action: 'Unmittelbares Aufsuchen einer Notübernachtung zur Kälteabwehr und hygienischen Grundversorgung.',
+          title: 'Kältehilfe-Clearing & Niedrigschwellige Notübernachtung',
+          action: `Zentrale Bettenabfrage bei der GEBEWO-Clearingstelle (030 34 39 70 37, 19–23 Uhr) oder Kältebus (0178 523 58 38) zur Vermeidung von Fehlwegen vor Ort. ${petNotice ? petNotice : ''}`.trim(),
           requiredDocs: [
             input.hasIdOrPassport ? 'Personalausweis oder Reisepass' : 'Vorsprache auch ohne Dokumente möglich',
           ],
@@ -332,6 +444,7 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
           requiredDocs: [
             input.hasIdOrPassport ? 'Ausweisdokument' : 'Ersatzidentitätsnachweis',
             input.hasBankAccount ? 'Kontoauszüge' : 'Bestätigung über Mittellosigkeit',
+            ...(postalWarningDoc ? [postalWarningDoc] : []),
           ],
           matchedFacilities: statutorySozialamt,
         },
@@ -369,6 +482,7 @@ export function generateDeterministicTriage(input: TriageInput, allFacilities: F
           'Personalausweis / Passdokument',
           'Kontoauszüge der letzten 3 Monate',
           input.hasHealthInsurance ? 'Krankenkassenkarte' : 'Nachweis über fehlenden Versicherungsschutz',
+          ...(postalWarningDoc ? [postalWarningDoc] : []),
         ],
         matchedFacilities: statutoryFacilities,
       },

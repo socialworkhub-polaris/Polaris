@@ -36,12 +36,21 @@ export function scanTextForPII(text?: string | null): PIIScanResult {
     warnings.push('Enthält eine Telefon- oder Handynummer.');
   }
 
-  // 3. Date of Birth patterns (e.g. geb. 15.03.1990, Geburtsdatum, DD.MM.YYYY)
-  const dobRegex = /(?:geb\.?|gebo?ren(?:\s+am)?|geburtsdatum\s*:?)\s*(\d{1,2}[./]\d{1,2}[./]\d{2,4})/i;
-  const standaloneDateRegex = /\b(?:0[1-9]|[12][0-9]|3[01])\.(?:0[1-9]|1[0-2])\.(?:19[3-9]\d|20[0-2]\d)\b/;
-  if (dobRegex.test(text) || standaloneDateRegex.test(text)) {
+  // 3. Date of Birth patterns
+  // Explicit DOB marker: "geb. 15.03.1990", "Geburtsdatum: 12.04.1985"
+  const explicitDobRegex = /(?:geb\.?|gebo?ren(?:\s+am)?|geburtsdatum\s*:?|d\.?o\.?b\.?\s*:?)\s*(\d{1,2}[./]\d{1,2}[./]\d{2,4})/i;
+  
+  // Historical birth year range (1920 - 2023) without appointment/procedural prefixes
+  const appointmentPrefixRegex = /(?:termin|vorsprache|frist|g[uü]ltig\s+bis|bescheid\s+vom|datum\s*:?|am|ab|bis)\s+(?:am\s+)?(\d{1,2}[./]\d{1,2}[./]\d{2,4})/i;
+  const historicalDateRegex = /\b(?:0[1-9]|[12][0-9]|3[01])\.(?:0[1-9]|1[0-2])\.(?:19[2-9]\d|20[0-1]\d|202[0-3])\b/;
+
+  const isAppointmentDate = appointmentPrefixRegex.test(text);
+  const hasExplicitDob = explicitDobRegex.test(text);
+  const hasHistoricalDate = historicalDateRegex.test(text);
+
+  if (hasExplicitDob || (hasHistoricalDate && !isAppointmentDate)) {
     detectedTypes.push('Geburtsdatum');
-    warnings.push('Enthält ein konkretes Datum / Geburtsdatum.');
+    warnings.push('Enthält ein konkretes Geburtsdatum des Klienten.');
   }
 
   // 4. German Krankenversichertennummer (KVNR: 1 Letter + 9 Digits, e.g., A123456789)
@@ -59,11 +68,22 @@ export function scanTextForPII(text?: string | null): PIIScanResult {
     warnings.push('Enthält einen Personen- oder Klientennamen (z. B. Herr/Frau oder Klient: ...).');
   }
 
-  // 6. German Street Address with House Number (e.g. Sonnenallee 120, Karl-Marx-Str. 45, Mehringdamm 12)
+  // 6. German Street Address with House Number (excluding known official authorities / services)
   const addressRegex = /\b[A-Za-zÄÖÜäöüß.\- ]*(?:straße|str\.|allee|damm|platz|weg|ufer|chaussee|gasse|ring|zeile|pfad)\s+\d{1,4}[a-z]?\b/i;
-  if (addressRegex.test(text)) {
-    detectedTypes.push('Wohnadresse');
-    warnings.push('Enthält eine spezifische Straßenadresse mit Hausnummer.');
+  const matchesAddress = addressRegex.test(text);
+
+  if (matchesAddress) {
+    // Whitelist check: If the address is clearly preceded by or part of an official service or authority
+    const authorityPrefixRegex = /(?:jobcenter|jugendamt|sozialamt|bezirksamt|b[uü]rgeramt|wohnhilfe|klinik|krankenhaus|spdi|notdienst|dienststelle|standort|gesch[aä]ftsstelle|beratungsstelle|rathaus|haus\s+[a-z0-9]|amt\s+)/i;
+    
+    // Known official Berlin authority addresses
+    const isKnownAuthority = 
+      /m[uü]llerstr(?:aße|\.)\s*(?:16|146)|karl-marx-allee\s*31|mainzer\s*str(?:aße|\.)\s*26|turmstr(?:aße|\.)\s*21|gruener\s*weg|franklinstr(?:aße|\.)/i.test(text);
+
+    if (!authorityPrefixRegex.test(text) && !isKnownAuthority) {
+      detectedTypes.push('Wohnadresse');
+      warnings.push('Enthält eine spezifische private Wohnadresse mit Hausnummer.');
+    }
   }
 
   return {

@@ -42,6 +42,7 @@ export default function TriageModal({ isOpen, onClose, facilities = [] }: Triage
   const [isLicenseOpen, setIsLicenseOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isOfflineGenerated, setIsOfflineGenerated] = useState<boolean>(false);
+  const [guestMode, setGuestMode] = useState<boolean>(false);
   const [triageUsage, setTriageUsage] = useState<{
     used: number;
     max: number;
@@ -228,10 +229,6 @@ export default function TriageModal({ isOpen, onClose, facilities = [] }: Triage
 
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
-        if (errData?.error === 'LIMIT_REACHED') {
-          setTriageUsage((prev) => ({ ...prev, used: prev.max, allowed: false }));
-          throw new Error('Du hast deine 3 kostenlosen KI-Triagen für diesen Monat aufgebraucht.');
-        }
         throw new Error(errData?.message || 'Fehler beim Abrufen des Stufenplans');
       }
 
@@ -239,7 +236,7 @@ export default function TriageModal({ isOpen, onClose, facilities = [] }: Triage
       setResult(data);
       setOriginalResult(data);
       setSelectedLang('de');
-      setIsOfflineGenerated(false);
+      setIsOfflineGenerated(!!data.isDeterministicFallback);
 
       if ((data as any).usage) {
         setTriageUsage({
@@ -500,7 +497,7 @@ const handlePrint = () => {
             </div>
           )}
 
-          {!user ? (
+          {!user && !guestMode ? (
             /* Logged-Out Preview & Teaser View */
             <div className="space-y-6">
               {/* Hero Banner */}
@@ -798,12 +795,46 @@ const handlePrint = () => {
                       {isAuthRegister ? 'Bereits registriert? Hier anmelden' : 'Noch kein Konto? Jetzt registrieren'}
                     </button>
                   </div>
+
+                  {/* Sofort-Bypass für den Akut-Einsatz */}
+                  <div className="pt-2 border-t border-slate-200 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setGuestMode(true)}
+                      className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-slate-300 shadow-2xs cursor-pointer"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Akut-Einsatz? Direkt zur Basis-Triage (Ohne Login)</span>
+                    </button>
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      100% kostenfrei, unbegrenzt & offline-sicher (0-Token Engine).
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           ) : !result ? (
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Gast-Modus Info Banner */}
+              {!user && guestMode && (
+                <div className="p-3 bg-amber-50/90 border border-amber-300/80 rounded-xl flex items-center justify-between text-xs text-amber-950">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      <strong>Basis-Modus aktiv:</strong> 0-Token Notfall-Triage ohne Registrierung.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setGuestMode(false)}
+                    className="text-xs text-blue-700 font-bold underline hover:text-blue-900 cursor-pointer"
+                  >
+                    Zum KI-Login
+                  </button>
+                </div>
+              )}
+
               {/* Pitch Demo Schnellstart Pills */}
               <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-xl">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 mb-2">
@@ -1036,23 +1067,22 @@ const handlePrint = () => {
                 </div>
               )}
 
-              {/* Limit Reached Warning Banner */}
-              {!triageUsage.unlimited && triageUsage.used >= triageUsage.max && (
-                <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-xs text-amber-900">
-                  <div className="flex items-center gap-2 font-bold text-amber-950">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Monatliches Kontingent erreicht (3 von 3 Triagen genutzt)</span>
+              {/* Limit Notice Banner (Graceful deterministic fallback) */}
+              {user && !triageUsage.unlimited && triageUsage.used >= triageUsage.max && (
+                <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-2 text-xs text-blue-950">
+                  <div className="flex items-center gap-2 font-bold text-blue-900">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>KI-Freikontingent erreicht (3/3) – Unbegrenzter Basis-Modus aktiv</span>
                   </div>
-                  <p className="leading-relaxed">
-                    Dein monatliches Freikontingent von 3 KI-Analysen ist für diesen Monat aufgebraucht.
-                    Möchtest du Polaris unbegrenzt mit deinem gesamten Team nutzen?
+                  <p className="text-slate-600 leading-relaxed">
+                    Dein monatliches Kontingent für KI-Tiefenanalysen ist ausgeschöpft. Du kannst jedoch weiterhin <strong>unbegrenzt</strong> rechtlich fundierte Stufenpläne mit unserer deterministischen 0-Token Engine erstellen.
                   </p>
                   <button
                     type="button"
                     onClick={() => setIsLicenseOpen(true)}
-                    className="mt-1 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow-xs transition cursor-pointer"
+                    className="mt-0.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs shadow-xs transition cursor-pointer"
                   >
-                    Team-Lizenz für Träger anfragen
+                    Unbegrenzte KI-Triage für dein Team anfragen →
                   </button>
                 </div>
               )}
@@ -1060,7 +1090,7 @@ const handlePrint = () => {
               <div className="flex justify-end pt-1">
                 <button
                   type="submit"
-                  disabled={isLoading || (!triageUsage.unlimited && triageUsage.used >= triageUsage.max)}
+                  disabled={isLoading}
                   className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isLoading ? (
@@ -1071,7 +1101,11 @@ const handlePrint = () => {
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>Stufenplan generieren</span>
+                      <span>
+                        {!user || (!triageUsage.unlimited && triageUsage.used >= triageUsage.max)
+                          ? 'Basis-Stufenplan generieren'
+                          : 'Stufenplan generieren'}
+                      </span>
                     </>
                   )}
                 </button>
@@ -1134,13 +1168,25 @@ const handlePrint = () => {
                 </div>
               </div>
 
-              {/* Offline Streetwork Status Badge */}
-              {isOfflineGenerated && (
-                <div className="flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 print:hidden shadow-xs">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-                  <div className="flex-1 leading-relaxed">
-                    <span className="font-bold">Offline-Streetwork-Modus:</span> Dieser Handlungsplan wurde ohne Serververbindung lokal & deterministisch nach den gesetzlichen Vorgaben (§ 8a SGB VIII / § 36 SGB XII / ASOG Berlin) erstellt.
+              {/* Offline & Deterministischer Basis-Status Badge */}
+              {(isOfflineGenerated || result.isDeterministicFallback) && (
+                <div className="flex items-center justify-between flex-wrap gap-2.5 p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-950 print:hidden shadow-xs">
+                  <div className="flex items-center gap-2.5 flex-1">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div className="leading-relaxed">
+                      <span className="font-bold">Deterministischer Stufenplan (0-Token Engine):</span>{' '}
+                      {result.message || 'Lokal nach gesetzlichen Vorgaben (§ 8a SGB VIII / § 36 SGB XII / ASOG Berlin) erstellt.'}
+                    </div>
                   </div>
+                  {!user && (
+                    <button
+                      type="button"
+                      onClick={() => { setGuestMode(false); setResult(null); }}
+                      className="text-[11px] text-blue-700 font-bold underline hover:text-blue-900 cursor-pointer"
+                    >
+                      Konto für KI-Triage erstellen →
+                    </button>
+                  )}
                 </div>
               )}
               
